@@ -1,0 +1,21 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: var(--space-8, 32px) var(--space-4, 16px);
+}
+
+.emptyText {
+  color: var(--color-text-muted, #8A8A82);
+  font-size: var(--font-size-md, 16px);
+  text-align: center;
+}
