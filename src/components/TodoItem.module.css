@@ -1,0 +1,230 @@
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  min-height: 48px;
+  background-color: var(--color-bg, #FAFAF7);
+  border-bottom: 1px solid var(--color-line, #E5E3DC);
+  list-style: none;
+  touch-action: pan-y;
+}
+
+.itemSub {
+  padding-left: 40px;
+}
+
+.itemDragging {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-md, 8px);
+  border-bottom-color: transparent;
+}
+
+.itemCompleted .textButton,
+.itemCompleted .textInput {
+  color: var(--color-text-muted, #8A8A82);
+  text-decoration: line-through;
+}
+
+.itemCompleted .time {
+  color: var(--color-text-muted, #8A8A82);
+}
+
+.handle {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #8A8A82);
+  cursor: grab;
+  touch-action: none;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.handleIcon {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 12px;
+}
+
+.handleIcon::before,
+.handleIcon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background-color: currentColor;
+  border-radius: 1px;
+}
+
+.handleIcon::before {
+  top: 3px;
+}
+
+.handleIcon::after {
+  bottom: 3px;
+}
+
+.checkbox {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkboxInner {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--color-text-muted, #8A8A82);
+  border-radius: 50%;
+  background-color: transparent;
+  transition: background-color 120ms ease, border-color 120ms ease;
+  position: relative;
+}
+
+.checkboxChecked .checkboxInner {
+  background-color: var(--color-text, #1F1F1F);
+  border-color: var(--color-text, #1F1F1F);
+}
+
+.checkboxChecked .checkboxInner::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 6px;
+  height: 10px;
+  border-right: 2px solid #FFFFFF;
+  border-bottom: 2px solid #FFFFFF;
+  transform: rotate(45deg);
+}
+
+.warnBadge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--color-warn, #D48806);
+  color: #FFFFFF;
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.time {
+  flex: 0 0 auto;
+  width: 48px;
+  text-align: right;
+  color: var(--color-text-muted, #8A8A82);
+  font-size: var(--font-size-sm, 14px);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeEmpty {
+  flex: 0 0 auto;
+  width: 48px;
+}
+
+.textWrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.textButton {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  font-size: var(--font-size-md, 16px);
+  color: var(--color-text, #1F1F1F);
+  padding: var(--space-2, 8px) 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.textEmpty {
+  color: var(--color-text-muted, #8A8A82);
+  font-style: italic;
+}
+
+.textInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-size-md, 16px);
+  color: var(--color-text, #1F1F1F);
+  padding: var(--space-2, 8px) 0;
+  background-color: transparent;
+  border-bottom: 1px solid var(--color-accent, #2B6CB0);
+}
+
+.indentButtons {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+}
+
+.iconButton {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #8A8A82);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 18px;
+}
+
+.iconButton:hover,
+.iconButton:focus-visible {
+  color: var(--color-text, #1F1F1F);
+  background-color: var(--color-line, #E5E3DC);
+}
+
+.deleteButton {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #8A8A82);
+  font-size: 20px;
+  border-radius: var(--radius-sm, 4px);
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.item:hover .deleteButton,
+.item:focus-within .deleteButton {
+  opacity: 1;
+}
+
+.deleteButton:hover,
+.deleteButton:focus-visible {
+  color: var(--color-text, #1F1F1F);
+  background-color: var(--color-line, #E5E3DC);
+  opacity: 1;
+}
+
+/* 모바일 터치 환경에서는 삭제 버튼을 흐리게라도 항상 노출 */
+@media (hover: none) {
+  .deleteButton {
+    opacity: 0.5;
+  }
+}

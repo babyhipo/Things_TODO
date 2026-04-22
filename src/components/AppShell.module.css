@@ -1,0 +1,52 @@
+.outer {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--color-bg-outer);
+}
+
+.app {
+  position: relative;
+  width: 100%;
+  max-width: var(--app-max-width);
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--color-bg);
+  border-bottom: 1px solid var(--color-line);
+  padding-top: env(safe-area-inset-top);
+}
+
+.main {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mainWithFooter {
+  /* footer 높이 + safe-area */
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+.footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-bg);
+  border-top: 1px solid var(--color-line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (min-width: 640px) {
+  .app {
+    min-height: 100vh;
+  }
+}

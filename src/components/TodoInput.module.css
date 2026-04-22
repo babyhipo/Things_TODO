@@ -1,0 +1,48 @@
+.form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  background-color: var(--color-bg, #FAFAF7);
+}
+
+.input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  /* iOS 자동 줌 방지를 위해 16px 이상 */
+  font-size: var(--font-size-md, 16px);
+  color: var(--color-text, #1F1F1F);
+  padding: 0 var(--space-3, 12px);
+  background-color: transparent;
+  border: 1px solid var(--color-line, #E5E3DC);
+  border-radius: var(--radius-md, 8px);
+}
+
+.input:focus {
+  border-color: var(--color-accent, #2B6CB0);
+}
+
+.addButton {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: var(--color-text, #1F1F1F);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-line, #E5E3DC);
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+.addButton:disabled {
+  opacity: 0.4;
+}
+
+.addButton:not(:disabled):hover,
+.addButton:not(:disabled):focus-visible {
+  background-color: var(--color-accent, #2B6CB0);
+  color: #FFFFFF;
+}
