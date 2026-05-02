@@ -174,12 +174,6 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
         <span className={styles.checkboxInner} aria-hidden="true" />
       </button>
 
-      {isOverdue ? (
-        <span className={styles.warnBadge} aria-label="시간이 지났습니다">
-          !
-        </span>
-      ) : null}
-
       {todo.time !== null ? (
         <span className={styles.time} aria-label={`시간 ${formatTime(todo.time)}`}>
           {formatTime(todo.time)}
@@ -235,6 +229,12 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
             </button>
           )}
         </div>
+      ) : null}
+
+      {isOverdue ? (
+        <span className={styles.warnBadge} aria-label="시간이 지났습니다">
+          !
+        </span>
       ) : null}
 
       <button
