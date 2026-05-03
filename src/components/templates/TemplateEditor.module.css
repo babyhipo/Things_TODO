@@ -1,0 +1,285 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(26, 26, 46, 0.45);
+  z-index: 60;
+  animation: fadeIn 180ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sheet {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  max-width: var(--app-max-width, 420px);
+  transform: translateX(-50%);
+  background-color: var(--color-bg, #F2F4FA);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  animation: slideUp 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(40px); opacity: 0.6; }
+  to   { transform: translateX(-50%) translateY(0);   opacity: 1; }
+}
+
+/* 시트 상단 드래그 표시선 */
+.dragHandle2 {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--color-line);
+  margin: 10px auto 0;
+  flex: 0 0 auto;
+}
+
+/* ── 헤더 ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 12px;
+  flex: 0 0 auto;
+}
+
+.title {
+  font-size: var(--font-size-md, 16px);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cancelBtn {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-muted);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm, 4px);
+  min-width: 44px;
+}
+
+.cancelBtn:hover {
+  background-color: var(--color-line);
+}
+
+.saveBtn {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 700;
+  color: var(--color-accent);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm, 4px);
+  min-width: 44px;
+  text-align: right;
+  transition: opacity 120ms;
+}
+
+.saveBtn:disabled {
+  opacity: 0.4;
+}
+
+/* ── 이름 입력 ── */
+.nameSection {
+  padding: 8px 16px 14px;
+  border-bottom: 1px solid var(--color-line);
+  flex: 0 0 auto;
+  background-color: var(--color-bg-card, #FFFFFF);
+}
+
+.sectionLabel {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.nameInput {
+  width: 100%;
+  font-size: var(--font-size-lg, 18px);
+  font-weight: 600;
+  color: var(--color-text);
+  padding: 4px 0;
+  background: transparent;
+  border-bottom: 2px solid var(--color-accent);
+}
+
+.nameInput::placeholder {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+/* ── 항목 목록 ── */
+.itemList {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background-color: var(--color-bg, #F2F4FA);
+}
+
+.emptyItems {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm, 14px);
+  padding: 28px 20px;
+  line-height: 1.6;
+}
+
+/* 개별 항목 행 */
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 0 4px;
+  min-height: 52px;
+  background-color: var(--color-bg-card, #FFFFFF);
+  border-bottom: 1px solid var(--color-line);
+  touch-action: pan-y;
+}
+
+.itemRowDragging {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-md, 8px);
+  border-bottom-color: transparent;
+}
+
+/* 항목 드래그 핸들 버튼 */
+.dragHandle {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.timeBadge {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  background-color: var(--color-accent-light, #EEF2FF);
+  padding: 3px 7px;
+  border-radius: 20px;
+}
+
+.itemText {
+  flex: 1 1 auto;
+  text-align: left;
+  font-size: var(--font-size-md, 16px);
+  color: var(--color-text);
+  padding: 14px 0;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.emptyText {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.itemEditInput {
+  flex: 1 1 auto;
+  font-size: var(--font-size-md, 16px);
+  color: var(--color-text);
+  padding: 14px 0;
+  background: transparent;
+  border-bottom: 1.5px solid var(--color-accent);
+  min-width: 0;
+}
+
+.itemDeleteBtn {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm, 4px);
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.itemRow:hover .itemDeleteBtn,
+.itemRow:focus-within .itemDeleteBtn {
+  opacity: 1;
+}
+
+.itemDeleteBtn:hover {
+  color: var(--color-warn, #EF4444);
+  background-color: #FEE2E2;
+}
+
+@media (hover: none) {
+  .itemDeleteBtn { opacity: 0.45; }
+}
+
+/* ── 항목 추가 입력 ── */
+.addSection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-line);
+  background-color: var(--color-bg-card, #FFFFFF);
+  flex: 0 0 auto;
+}
+
+.addInput {
+  flex: 1 1 auto;
+  height: 42px;
+  font-size: var(--font-size-md, 16px);
+  color: var(--color-text);
+  padding: 0 12px;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  transition: border-color 120ms ease;
+}
+
+.addInput:focus {
+  border-color: var(--color-accent);
+}
+
+.addBtn {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  background-color: var(--color-line);
+  border-radius: var(--radius-md, 8px);
+  transition: opacity 120ms, background-color 120ms, color 120ms;
+}
+
+.addBtn:disabled {
+  opacity: 0.35;
+}
+
+.addBtn:not(:disabled):hover {
+  background-color: var(--color-accent);
+  color: #FFFFFF;
+}

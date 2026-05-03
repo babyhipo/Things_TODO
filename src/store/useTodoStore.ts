@@ -26,6 +26,9 @@ interface TodoState {
   applyTemplate: (day: DayKey, templateId: string) => void;
   saveAsTemplate: (day: DayKey, name: string) => void;
   deleteTemplate: (templateId: string) => void;
+  renameTemplate: (templateId: string, name: string) => void;
+  updateTemplate: (templateId: string, name: string, items: Template['items']) => void;
+  setTodoTime: (day: DayKey, id: string, time: number) => void;
 
   performRolloverIfNeeded: () => void;
 }
@@ -260,6 +263,31 @@ export const useTodoStore = create<TodoState>()(
           if (tpl.isBuiltIn) return {};
           return { templates: state.templates.filter((t) => t.id !== templateId) };
         });
+      },
+
+      renameTemplate: (templateId, name) => {
+        set((state) => ({
+          templates: state.templates.map((t) =>
+            t.id === templateId ? { ...t, name } : t,
+          ),
+        }));
+      },
+
+      setTodoTime: (day, id, time) => {
+        set((state) => ({
+          days: {
+            ...state.days,
+            [day]: state.days[day].map((t) => (t.id === id ? { ...t, time } : t)),
+          },
+        }));
+      },
+
+      updateTemplate: (templateId, name, items) => {
+        set((state) => ({
+          templates: state.templates.map((t) =>
+            t.id === templateId ? { ...t, name, items } : t,
+          ),
+        }));
       },
 
       performRolloverIfNeeded: () => {

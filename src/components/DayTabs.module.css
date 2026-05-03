@@ -1,22 +1,54 @@
-.tabs {
+.container {
   display: flex;
-  width: 100%;
+  gap: 10px;
+  padding: 0 20px 16px;
+  background-color: var(--color-bg);
 }
 
 .tab {
   flex: 1 1 0;
-  min-height: 44px;
-  padding: var(--space-3) var(--space-2);
-  font-size: var(--font-size-md);
-  font-weight: 500;
-  color: var(--color-text-muted);
-  border-bottom: 2px solid transparent;
-  transition: color 120ms ease, border-color 120ms ease;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: var(--radius-lg, 12px);
+  background-color: var(--color-bg-card, #FFFFFF);
+  border: 1.5px solid transparent;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: all 150ms ease;
+  min-height: 64px;
+}
+
+.tab:active {
+  transform: scale(0.97);
 }
 
 .tabActive {
-  color: var(--color-text);
-  font-weight: 700;
-  border-bottom-color: var(--color-accent);
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  box-shadow: 0 4px 12px rgba(59, 91, 219, 0.3);
+}
+
+.tabLabel {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: -0.3px;
+}
+
+.tabActive .tabLabel {
+  color: #FFFFFF;
+}
+
+.tabDate {
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabActive .tabDate {
+  color: rgba(255, 255, 255, 0.8);
 }

@@ -1,49 +1,58 @@
 import styles from './DayTabs.module.css';
-import { useTodoStore } from '../store/useTodoStore';
-import type { DayKey } from '../types/todo';
 
-interface TabButtonProps {
-  day: DayKey;
-  label: string;
-  active: boolean;
-  onClick: () => void;
+export type DayTabValue = 'today' | 'tomorrow' | 'template';
+
+interface DayTabsProps {
+  activeTab: DayTabValue;
+  onChange: (tab: DayTabValue) => void;
 }
 
-function TabButton({ day, label, active, onClick }: TabButtonProps) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      id={`daytab-${day}`}
-      aria-selected={active}
-      aria-controls={`daypanel-${day}`}
-      tabIndex={active ? 0 : -1}
-      className={`${styles.tab} ${active ? styles.tabActive : ''}`}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
+function getTodayDate(): { day: number; month: number } {
+  const d = new Date();
+  return { day: d.getDate(), month: d.getMonth() + 1 };
 }
 
-export function DayTabs() {
-  const activeDay = useTodoStore((s) => s.activeDay);
-  const setActiveDay = useTodoStore((s) => s.setActiveDay);
+function getTomorrowDate(): { day: number; month: number } {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return { day: d.getDate(), month: d.getMonth() + 1 };
+}
+
+export function DayTabs({ activeTab, onChange }: DayTabsProps) {
+  const today = getTodayDate();
+  const tomorrow = getTomorrowDate();
 
   return (
-    <nav className={styles.tabs} role="tablist" aria-label="날짜 선택">
-      <TabButton
-        day="today"
-        label="오늘 할 일"
-        active={activeDay === 'today'}
-        onClick={() => setActiveDay('today')}
-      />
-      <TabButton
-        day="tomorrow"
-        label="내일 계획"
-        active={activeDay === 'tomorrow'}
-        onClick={() => setActiveDay('tomorrow')}
-      />
-    </nav>
+    <div className={styles.container}>
+      <button
+        type="button"
+        className={`${styles.tab} ${activeTab === 'today' ? styles.tabActive : ''}`}
+        onClick={() => onChange('today')}
+        aria-pressed={activeTab === 'today'}
+      >
+        <span className={styles.tabLabel}>오늘</span>
+        <span className={styles.tabDate}>{today.month}/{today.day}</span>
+      </button>
+
+      <button
+        type="button"
+        className={`${styles.tab} ${activeTab === 'tomorrow' ? styles.tabActive : ''}`}
+        onClick={() => onChange('tomorrow')}
+        aria-pressed={activeTab === 'tomorrow'}
+      >
+        <span className={styles.tabLabel}>내일</span>
+        <span className={styles.tabDate}>{tomorrow.month}/{tomorrow.day}</span>
+      </button>
+
+      <button
+        type="button"
+        className={`${styles.tab} ${activeTab === 'template' ? styles.tabActive : ''}`}
+        onClick={() => onChange('template')}
+        aria-pressed={activeTab === 'template'}
+      >
+        <span className={styles.tabLabel}>템플릿</span>
+        <span className={styles.tabDate}>✦</span>
+      </button>
+    </div>
   );
 }
