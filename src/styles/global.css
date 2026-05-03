@@ -1,11 +1,17 @@
 :root {
-  --color-bg: #FAFAF7;
-  --color-bg-outer: #F0EEE7;
-  --color-text: #1F1F1F;
-  --color-text-muted: #8A8A82;
-  --color-accent: #2B6CB0;
-  --color-line: #E5E3DC;
-  --color-warn: #D48806;
+  --color-bg: #F2F4FA;
+  --color-bg-outer: #E6E9F4;
+  --color-bg-card: #FFFFFF;
+  --color-text: #1A1A2E;
+  --color-text-muted: #6B7280;
+  --color-accent: #3B5BDB;
+  --color-accent-light: #EEF2FF;
+  --color-line: #E2E5F0;
+  --color-warn: #EF4444;
+  --color-event-blue: #3B5BDB;
+  --color-event-red: #EF4444;
+  --color-event-green: #10B981;
+  --bottom-nav-height: 64px;
 
   --font-family-base: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", Roboto, sans-serif;
 
