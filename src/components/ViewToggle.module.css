@@ -1,0 +1,91 @@
+.toggle {
+  position: fixed;
+  right: 20px;
+  bottom: calc(68px + env(safe-area-inset-bottom) + 14px);
+  z-index: 25;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  border-radius: 100px;
+  padding: 4px;
+  gap: 0;
+  transition: background 220ms ease, box-shadow 220ms ease;
+  cursor: pointer;
+}
+
+/* 원형 아이콘 버블 */
+.circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 220ms ease, box-shadow 220ms ease, order 0ms;
+  background: #FFFFFF;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  padding: 0 10px 0 7px;
+  transition: color 220ms ease;
+  white-space: nowrap;
+}
+
+/* ── OFF 상태 (목록) ── */
+.off {
+  background: #E6E9F4;
+  box-shadow:
+    5px 5px 12px rgba(150, 158, 190, 0.45),
+    -5px -5px 12px rgba(255, 255, 255, 0.85);
+}
+
+.off .circle {
+  order: 2;
+  color: var(--color-text-muted);
+  box-shadow:
+    3px 3px 7px rgba(150, 158, 190, 0.4),
+    -3px -3px 7px rgba(255, 255, 255, 0.9);
+}
+
+.off .label {
+  order: 1;
+  color: var(--color-text-muted);
+  padding: 0 7px 0 10px;
+}
+
+/* ── ON 상태 (시간표) ── */
+.on {
+  background: var(--color-accent, #3B5BDB);
+  box-shadow:
+    4px 4px 14px rgba(59, 91, 219, 0.45),
+    -2px -2px 8px rgba(255, 255, 255, 0.15);
+}
+
+.on .circle {
+  order: 1;
+  color: var(--color-accent, #3B5BDB);
+  box-shadow:
+    2px 2px 6px rgba(30, 50, 160, 0.3),
+    -2px -2px 6px rgba(255, 255, 255, 0.4);
+}
+
+.on .label {
+  order: 2;
+  color: #FFFFFF;
+  padding: 0 14px 0 10px;
+}
+
+.toggle:active {
+  transform: scale(0.97);
+}
+
+@media (min-width: 640px) {
+  .toggle {
+    right: calc(50% - var(--app-max-width, 420px) / 2 + 20px);
+  }
+}

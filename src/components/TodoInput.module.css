@@ -3,14 +3,30 @@
   align-items: center;
   gap: var(--space-2, 8px);
   padding: 6px var(--space-4, 16px);
-  background-color: var(--color-bg, #FAFAF7);
+  background-color: var(--color-bg-card, #FFFFFF);
+}
+
+.templateButton {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-md, 8px);
+  background-color: var(--color-line, #E2E5F0);
+  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.templateButton:active {
+  opacity: 0.7;
 }
 
 .input {
   flex: 1 1 auto;
   min-width: 0;
   height: 36px;
-  /* iOS 자동 줌 방지를 위해 16px 이상 */
   font-size: var(--font-size-md, 16px);
   color: var(--color-text, #1F1F1F);
   padding: 0 var(--space-3, 12px);
@@ -20,7 +36,7 @@
 }
 
 .input:focus {
-  border-color: var(--color-accent, #2B6CB0);
+  border-color: var(--color-accent, #3B5BDB);
 }
 
 .addButton {
@@ -33,7 +49,7 @@
   font-size: 20px;
   color: var(--color-text, #1F1F1F);
   border-radius: var(--radius-md, 8px);
-  background-color: var(--color-line, #E5E3DC);
+  background-color: var(--color-line, #E2E5F0);
   transition: opacity 120ms ease, background-color 120ms ease;
 }
 
@@ -43,6 +59,6 @@
 
 .addButton:not(:disabled):hover,
 .addButton:not(:disabled):focus-visible {
-  background-color: var(--color-accent, #2B6CB0);
+  background-color: var(--color-accent, #3B5BDB);
   color: #FFFFFF;
 }

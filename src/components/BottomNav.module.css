@@ -13,7 +13,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   color: var(--color-text-muted);
   transition: color 120ms ease;
   padding: 8px 0;
@@ -25,6 +25,23 @@
 
 .itemActive {
   color: var(--color-accent);
+}
+
+.dayLabel {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.dayDate {
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.65;
+}
+
+.itemActive .dayDate {
+  opacity: 1;
 }
 
 .icon {

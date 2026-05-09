@@ -19,6 +19,7 @@ interface TodoState {
   deleteTodo: (day: DayKey, id: string) => void;
 
   reorderTodos: (day: DayKey, newOrderIds: string[], movedId: string) => void;
+  clearDay: (day: DayKey) => void;
 
   indentTodo: (day: DayKey, id: string) => void;
   outdentTodo: (day: DayKey, id: string) => void;
@@ -28,6 +29,8 @@ interface TodoState {
   deleteTemplate: (templateId: string) => void;
   renameTemplate: (templateId: string, name: string) => void;
   updateTemplate: (templateId: string, name: string, items: Template['items']) => void;
+  reorderTemplates: (newOrderIds: string[]) => void;
+  createEmptyTemplate: () => string;
   setTodoTime: (day: DayKey, id: string, time: number | null) => void;
 
   performRolloverIfNeeded: () => void;
@@ -119,6 +122,10 @@ export const useTodoStore = create<TodoState>()(
             days: { ...state.days, [day]: densifyOrder(remaining) },
           };
         });
+      },
+
+      clearDay: (day) => {
+        set((state) => ({ days: { ...state.days, [day]: [] } }));
       },
 
       reorderTodos: (day, newOrderIds, movedId) => {
@@ -288,6 +295,23 @@ export const useTodoStore = create<TodoState>()(
             t.id === templateId ? { ...t, name, items } : t,
           ),
         }));
+      },
+
+      reorderTemplates: (newOrderIds) => {
+        set((state) => {
+          const byId = new Map(state.templates.map((t) => [t.id, t]));
+          const reordered = newOrderIds.flatMap((id) => byId.get(id) ?? []);
+          const rest = state.templates.filter((t) => !newOrderIds.includes(t.id));
+          return { templates: [...reordered, ...rest] };
+        });
+      },
+
+      createEmptyTemplate: () => {
+        const id = newId();
+        set((state) => ({
+          templates: [...state.templates, { id, name: '새 템플릿', items: [] }],
+        }));
+        return id;
       },
 
       performRolloverIfNeeded: () => {

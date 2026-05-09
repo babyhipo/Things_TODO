@@ -1,36 +1,17 @@
 import styles from './BottomNav.module.css';
 
-export type ViewMode = 'list' | 'timetable' | 'template';
+export type DayNavValue = 'today' | 'tomorrow' | 'template';
 
 interface BottomNavProps {
-  active: ViewMode;
-  onChange: (mode: ViewMode) => void;
-}
-
-function ListIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="2" rx="1" fill="currentColor" />
-      <rect x="3" y="11" width="18" height="2" rx="1" fill="currentColor" />
-      <rect x="3" y="17" width="18" height="2" rx="1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function TimetableIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" fill="none" />
-      <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
+  active: DayNavValue;
+  onChange: (day: DayNavValue) => void;
+  todayDate: string;
+  tomorrowDate: string;
 }
 
 function TemplateIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor" opacity="0.8" />
       <rect x="13" y="3" width="8" height="8" rx="1.5" fill="currentColor" opacity="0.5" />
       <rect x="3" y="13" width="8" height="8" rx="1.5" fill="currentColor" opacity="0.5" />
@@ -39,29 +20,29 @@ function TemplateIcon() {
   );
 }
 
-export function BottomNav({ active, onChange }: BottomNavProps) {
+export function BottomNav({ active, onChange, todayDate, tomorrowDate }: BottomNavProps) {
   return (
-    <nav className={styles.nav} role="navigation" aria-label="보기 모드 선택">
+    <nav className={styles.nav} role="navigation" aria-label="날짜 선택">
       <button
         type="button"
-        className={`${styles.item} ${active === 'list' ? styles.itemActive : ''}`}
-        onClick={() => onChange('list')}
-        aria-label="목록 보기"
-        aria-pressed={active === 'list'}
+        className={`${styles.item} ${active === 'today' ? styles.itemActive : ''}`}
+        onClick={() => onChange('today')}
+        aria-label="오늘"
+        aria-pressed={active === 'today'}
       >
-        <span className={styles.icon}><ListIcon /></span>
-        <span className={styles.label}>목록</span>
+        <span className={styles.dayLabel}>오늘</span>
+        <span className={styles.dayDate}>{todayDate}</span>
       </button>
 
       <button
         type="button"
-        className={`${styles.item} ${active === 'timetable' ? styles.itemActive : ''}`}
-        onClick={() => onChange('timetable')}
-        aria-label="시간표 보기"
-        aria-pressed={active === 'timetable'}
+        className={`${styles.item} ${active === 'tomorrow' ? styles.itemActive : ''}`}
+        onClick={() => onChange('tomorrow')}
+        aria-label="내일"
+        aria-pressed={active === 'tomorrow'}
       >
-        <span className={styles.icon}><TimetableIcon /></span>
-        <span className={styles.label}>시간표</span>
+        <span className={styles.dayLabel}>내일</span>
+        <span className={styles.dayDate}>{tomorrowDate}</span>
       </button>
 
       <button
