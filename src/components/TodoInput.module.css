@@ -2,14 +2,14 @@
   display: flex;
   align-items: center;
   gap: var(--space-2, 8px);
-  padding: var(--space-3, 12px) var(--space-4, 16px);
+  padding: 6px var(--space-4, 16px);
   background-color: var(--color-bg, #FAFAF7);
 }
 
 .input {
   flex: 1 1 auto;
   min-width: 0;
-  height: 44px;
+  height: 36px;
   /* iOS 자동 줌 방지를 위해 16px 이상 */
   font-size: var(--font-size-md, 16px);
   color: var(--color-text, #1F1F1F);
@@ -25,12 +25,12 @@
 
 .addButton {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 20px;
   color: var(--color-text, #1F1F1F);
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-line, #E5E3DC);

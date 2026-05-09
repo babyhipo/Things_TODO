@@ -28,7 +28,7 @@ interface TodoState {
   deleteTemplate: (templateId: string) => void;
   renameTemplate: (templateId: string, name: string) => void;
   updateTemplate: (templateId: string, name: string, items: Template['items']) => void;
-  setTodoTime: (day: DayKey, id: string, time: number) => void;
+  setTodoTime: (day: DayKey, id: string, time: number | null) => void;
 
   performRolloverIfNeeded: () => void;
 }

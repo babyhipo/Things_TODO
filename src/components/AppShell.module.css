@@ -27,6 +27,8 @@
   flex: 1 1 auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  background-color: #FFFFFF;
+  --color-bg: #FFFFFF;
 }
 
 /* 입력 바: 하단 네비 위에 떠 있음 */
