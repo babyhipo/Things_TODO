@@ -141,7 +141,7 @@
   align-items: center;
   gap: 6px;
   padding: 0 12px 0 4px;
-  min-height: 52px;
+  min-height: 44px;
   background-color: var(--color-bg-card, #FFFFFF);
   border-bottom: 1px solid var(--color-line);
   touch-action: pan-y;
@@ -157,7 +157,7 @@
 .dragHandle {
   flex: 0 0 auto;
   width: 32px;
-  height: 44px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -184,9 +184,10 @@
 .itemText {
   flex: 1 1 auto;
   text-align: left;
-  font-size: var(--font-size-md, 16px);
+  font-size: 13px;
+  font-weight: 600;
   color: var(--color-text);
-  padding: 14px 0;
+  padding: 4px 0;
   min-width: 0;
   word-break: break-word;
 }
@@ -198,9 +199,10 @@
 
 .itemEditInput {
   flex: 1 1 auto;
-  font-size: var(--font-size-md, 16px);
+  font-size: 13px;
+  font-weight: 600;
   color: var(--color-text);
-  padding: 14px 0;
+  padding: 4px 0;
   background: transparent;
   border-bottom: 1.5px solid var(--color-accent);
   min-width: 0;

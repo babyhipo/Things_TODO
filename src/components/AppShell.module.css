@@ -21,6 +21,7 @@
   z-index: 10;
   background-color: var(--color-bg);
   padding-top: env(safe-area-inset-top);
+  box-shadow: 0 4px 12px rgba(59, 91, 219, 0.10), 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .main {
@@ -29,6 +30,7 @@
   -webkit-overflow-scrolling: touch;
   background-color: #FFFFFF;
   --color-bg: #FFFFFF;
+  padding-top: 16px;
 }
 
 /* 입력 바: 하단 네비 위에 떠 있음 */

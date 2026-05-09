@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { AppShell } from './components/AppShell';
-import { DateHeader } from './components/DateHeader';
-import { DayTabs, type DayTabValue } from './components/DayTabs';
-import { BottomNav, type ViewMode } from './components/BottomNav';
+import { FolderTabs, type FolderTabValue } from './components/FolderTabs';
+import { ViewToggle, type ContentView } from './components/ViewToggle';
+import { ListToolbar } from './components/ListToolbar';
 import { TodoList } from './components/TodoList';
 import { TodoInput } from './components/TodoInput';
 import { TimelineView } from './components/TimelineView';
@@ -18,46 +18,33 @@ function App() {
   const activeStoreDay = useTodoStore((s) => s.activeDay);
   const setStoreDay = useTodoStore((s) => s.setActiveDay);
 
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [contentView, setContentView] = useState<ContentView>('list');
+  const [templateOpen, setTemplateOpen] = useState(false);
 
-  // 날짜 탭의 현재 선택 (store day 또는 'template')
-  const activeDayTab: DayTabValue =
-    viewMode === 'template' ? 'template' : activeStoreDay;
-
-  const handleDayTabChange = (tab: DayTabValue) => {
-    if (tab === 'template') {
-      setViewMode('template');
-    } else {
-      setStoreDay(tab);
-      // template 모드에서 날짜 탭 클릭 시 목록 뷰로 복귀
-      if (viewMode === 'template') setViewMode('list');
-    }
-  };
-
-  const handleViewModeChange = (mode: ViewMode) => {
-    setViewMode(mode);
-  };
-
-  const showInput = viewMode === 'list' || viewMode === 'timetable';
+  const activeTab: FolderTabValue =
+    activeStoreDay === 'tomorrow' ? 'tomorrow' : 'today';
 
   return (
     <AppShell
-      header={
-        <>
-          <DateHeader />
-          <DayTabs activeTab={activeDayTab} onChange={handleDayTabChange} />
-        </>
+      header={<FolderTabs activeTab={activeTab} onChange={(tab) => setStoreDay(tab)} />}
+      footer={
+        <TodoInput onTemplateClick={() => setTemplateOpen(true)} />
       }
-      footer={showInput ? <TodoInput /> : null}
-      bottomNav={<BottomNav active={viewMode} onChange={handleViewModeChange} />}
     >
-      {viewMode === 'template' ? (
-        <TemplatePanel embedded />
-      ) : viewMode === 'timetable' ? (
+      <ListToolbar day={activeStoreDay} />
+
+      {contentView === 'timetable' ? (
         <TimelineView day={activeStoreDay} />
       ) : (
         <TodoList />
       )}
+
+      <ViewToggle active={contentView} onChange={setContentView} />
+
+      <TemplatePanel
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+      />
     </AppShell>
   );
 }
