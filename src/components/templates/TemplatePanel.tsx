@@ -318,8 +318,6 @@ export function TemplatePanel({ open, onClose, embedded }: TemplatePanelProps) {
     saveAsTemplate(activeDay, trimmed);
   };
 
-  const dayLabel = activeDay === 'today' ? '오늘 할 일' : '내일 계획';
-
   if (embedded) {
     return <TemplatePanelContent embedded />;
   }
