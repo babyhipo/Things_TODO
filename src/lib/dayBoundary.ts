@@ -1,4 +1,4 @@
-export const ROLLOVER_HOUR = 2;
+export const ROLLOVER_HOUR = 4;
 
 function pad2(n: number): string {
   return n.toString().padStart(2, '0');

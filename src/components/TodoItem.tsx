@@ -154,15 +154,16 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
       onKeyDown={handleRowKeyDown}
       {...attributes}
     >
-      <button
-        type="button"
-        aria-label="드래그로 순서 변경"
-        className={styles.handle}
-        {...listeners}
-      >
-        <span className={styles.handleIcon} aria-hidden="true" />
-      </button>
+      {/* 시간 */}
+      {todo.time !== null ? (
+        <span className={styles.time} aria-label={`시간 ${formatTime(todo.time)}`}>
+          {formatTime(todo.time)}
+        </span>
+      ) : (
+        <span className={styles.timeEmpty} aria-hidden="true" />
+      )}
 
+      {/* 체크박스 */}
       <button
         type="button"
         role="checkbox"
@@ -174,14 +175,7 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
         <span className={styles.checkboxInner} aria-hidden="true" />
       </button>
 
-      {todo.time !== null ? (
-        <span className={styles.time} aria-label={`시간 ${formatTime(todo.time)}`}>
-          {formatTime(todo.time)}
-        </span>
-      ) : (
-        <span className={styles.timeEmpty} aria-hidden="true" />
-      )}
-
+      {/* 일정 내용 */}
       <div className={styles.textWrap}>
         {editing ? (
           <input
@@ -231,19 +225,21 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
         </div>
       ) : null}
 
+      {/* 느낌표 알림 */}
       {isOverdue ? (
         <span className={styles.warnBadge} aria-label="시간이 지났습니다">
           !
         </span>
       ) : null}
 
+      {/* 그립 */}
       <button
         type="button"
-        aria-label="삭제"
-        className={styles.deleteButton}
-        onClick={() => deleteTodo(day, todo.id)}
+        aria-label="드래그로 순서 변경"
+        className={styles.handle}
+        {...listeners}
       >
-        {'×'}
+        <span className={styles.handleIcon} aria-hidden="true" />
       </button>
     </li>
   );

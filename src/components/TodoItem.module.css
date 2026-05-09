@@ -2,11 +2,12 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-2, 8px);
-  padding: var(--space-2, 8px) var(--space-3, 12px);
-  min-height: 48px;
-  background-color: var(--color-bg, #FAFAF7);
-  border-bottom: 1px solid var(--color-line, #E5E3DC);
+  gap: 10px;
+  padding: 5px 12px 5px 10px;
+  min-height: 36px;
+  background-color: var(--color-bg-card, #FFFFFF);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
   list-style: none;
   touch-action: pan-y;
 }
@@ -33,12 +34,12 @@
 
 .handle {
   flex: 0 0 auto;
-  width: 24px;
-  height: 44px;
+  width: 20px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted, #8A8A82);
+  color: var(--color-line);
   cursor: grab;
   touch-action: none;
 }
@@ -75,8 +76,8 @@
 
 .checkbox {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 24px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,8 +85,8 @@
 
 .checkboxInner {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border: 1.5px solid var(--color-text-muted, #8A8A82);
   border-radius: 50%;
   background-color: transparent;
@@ -94,17 +95,17 @@
 }
 
 .checkboxChecked .checkboxInner {
-  background-color: var(--color-text, #1F1F1F);
-  border-color: var(--color-text, #1F1F1F);
+  background-color: var(--color-accent, #3B5BDB);
+  border-color: var(--color-accent, #3B5BDB);
 }
 
 .checkboxChecked .checkboxInner::after {
   content: '';
   position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 6px;
-  height: 10px;
+  left: 3px;
+  top: 1px;
+  width: 5px;
+  height: 8px;
   border-right: 2px solid #FFFFFF;
   border-bottom: 2px solid #FFFFFF;
   transform: rotate(45deg);
@@ -127,11 +128,13 @@
 
 .time {
   flex: 0 0 auto;
-  width: 48px;
+  width: 40px;
   text-align: right;
   color: var(--color-text-muted, #8A8A82);
-  font-size: var(--font-size-sm, 14px);
+  font-size: 12px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
 }
 
 .timeEmpty {
@@ -150,12 +153,13 @@
   flex: 1 1 auto;
   min-width: 0;
   text-align: left;
-  font-size: var(--font-size-md, 16px);
+  font-size: 13px;
+  font-weight: 600;
   color: var(--color-text, #1F1F1F);
-  padding: var(--space-2, 8px) 0;
+  padding: 2px 0;
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 .textEmpty {
@@ -166,11 +170,12 @@
 .textInput {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: var(--font-size-md, 16px);
+  font-size: 13px;
+  font-weight: 600;
   color: var(--color-text, #1F1F1F);
-  padding: var(--space-2, 8px) 0;
+  padding: 2px 0;
   background-color: transparent;
-  border-bottom: 1px solid var(--color-accent, #2B6CB0);
+  border-bottom: 1px solid var(--color-accent, #3B5BDB);
 }
 
 .indentButtons {
