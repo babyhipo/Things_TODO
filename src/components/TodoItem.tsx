@@ -20,7 +20,10 @@ interface TodoItemProps {
 
 function buildEditableValue(todo: Todo): string {
   if (todo.time !== null) {
-    return todo.text ? `${formatTime(todo.time)} ${todo.text}` : formatTime(todo.time);
+    const timeStr = (todo.endTime != null)
+      ? `${formatTime(todo.time)}-${formatTime(todo.endTime)}`
+      : formatTime(todo.time);
+    return todo.text ? `${timeStr} ${todo.text}` : timeStr;
   }
   return todo.text;
 }
@@ -150,15 +153,20 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
       style={style}
       className={`${styles.item} ${isSub ? styles.itemSub : ''} ${
         isDragging ? styles.itemDragging : ''
-      } ${todo.completed ? styles.itemCompleted : ''}`}
+      } ${todo.completed ? styles.itemCompleted : ''} ${
+        todo.endTime != null ? styles.itemRange : ''
+      }`}
       onKeyDown={handleRowKeyDown}
       {...attributes}
     >
       {/* 시간 */}
       {todo.time !== null ? (
-        <span className={styles.time} aria-label={`시간 ${formatTime(todo.time)}`}>
-          {formatTime(todo.time)}
-        </span>
+        <div className={styles.timeWrap} aria-label={`시간 ${formatTime(todo.time)}`}>
+          <span className={styles.time}>{formatTime(todo.time)}</span>
+          {todo.endTime != null && (
+            <span className={styles.timeEnd}>-{formatTime(todo.endTime)}</span>
+          )}
+        </div>
       ) : (
         <span className={styles.timeEmpty} aria-hidden="true" />
       )}
