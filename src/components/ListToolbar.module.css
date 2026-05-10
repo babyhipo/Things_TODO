@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 4px;
   padding: 4px 16px;
   background: var(--color-bg-card, #FFFFFF);
   border-bottom: 1px solid var(--color-line, #E2E5F0);
@@ -23,5 +24,24 @@
 }
 
 .clearBtn:disabled {
+  opacity: 0.35;
+}
+
+.dedupBtn {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm, 4px);
+  transition: color 120ms ease, background-color 120ms ease;
+  letter-spacing: -0.2px;
+}
+
+.dedupBtn:not(:disabled):active {
+  color: var(--color-accent, #3B5BDB);
+  background-color: var(--color-accent-light, #EEF2FF);
+}
+
+.dedupBtn:disabled {
   opacity: 0.35;
 }

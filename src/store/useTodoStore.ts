@@ -20,6 +20,7 @@ interface TodoState {
 
   reorderTodos: (day: DayKey, newOrderIds: string[], movedId: string) => void;
   clearDay: (day: DayKey) => void;
+  deduplicateDay: (day: DayKey) => void;
 
   indentTodo: (day: DayKey, id: string) => void;
   outdentTodo: (day: DayKey, id: string) => void;
@@ -76,12 +77,13 @@ export const useTodoStore = create<TodoState>()(
       setActiveDay: (day) => set({ activeDay: day }),
 
       addTodo: (day, rawText) => {
-        const { time, cleanText } = parseTime(rawText);
+        const { time, endTime, cleanText } = parseTime(rawText);
         if (!cleanText && time === null) return;
         const newTodo: Todo = {
           id: newId(),
           text: cleanText,
           time,
+          endTime: endTime ?? null,
           completed: false,
           parentId: null,
           order: 0,
@@ -93,12 +95,12 @@ export const useTodoStore = create<TodoState>()(
       },
 
       updateTodoText: (day, id, rawText) => {
-        const { time, cleanText } = parseTime(rawText);
+        const { time, endTime, cleanText } = parseTime(rawText);
         set((state) => ({
           days: {
             ...state.days,
             [day]: state.days[day].map((t) =>
-              t.id === id ? { ...t, text: cleanText, time } : t,
+              t.id === id ? { ...t, text: cleanText, time, endTime: endTime ?? null } : t,
             ),
           },
         }));
@@ -126,6 +128,20 @@ export const useTodoStore = create<TodoState>()(
 
       clearDay: (day) => {
         set((state) => ({ days: { ...state.days, [day]: [] } }));
+      },
+
+      deduplicateDay: (day) => {
+        set((state) => {
+          const sorted = [...state.days[day]].sort((a, b) => a.order - b.order);
+          const seen = new Set<string>();
+          const deduped = sorted.filter((t) => {
+            const key = `${t.time ?? 'null'}::${t.text}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          return { days: { ...state.days, [day]: densifyOrder(deduped) } };
+        });
       },
 
       reorderTodos: (day, newOrderIds, movedId) => {
