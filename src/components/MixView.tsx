@@ -1,22 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import styles from './TimelineView.module.css';
+import styles from './MixView.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
 import type { DayKey, Todo } from '../types/todo';
 
-/* ── 하루 기준: 새벽 4시 ── */
-const DAY_START_MIN = 4 * 60; // 240
+const DAY_START_MIN = 4 * 60;
 
-/** 저장값(0~1439) → 가상 시간(240~1679): 새벽 0~3시는 하루 끝에 배치 */
 function toVirt(t: number): number {
   return t < DAY_START_MIN ? t + 1440 : t;
 }
-/** 가상 시간(240~1679) → 저장값(0~1439) */
 function fromVirt(t: number): number {
   return t >= 1440 ? t - 1440 : t;
 }
 
-/* ── 현재 시각 (가상 시간) ── */
 function getCurrentMinutes(): number {
   const d = new Date();
   const total = d.getHours() * 60 + d.getMinutes();
@@ -31,33 +27,19 @@ function useNowMinutes(): number {
   return now;
 }
 
-/* ── 이벤트 색상 ── */
-function eventColor(time: number | null, overdue: boolean, completed: boolean, now: number, day: string): string {
-  if (completed) return '#9CA3AF';
-  if (overdue)   return '#EF4444';
-  if (time === null) return '#7C3AED';
-  // 내일 탭은 1440분(하루)을 더해 실제 미래 거리로 계산
-  const offset = day === 'tomorrow' ? 1440 : 0;
-  const diff = toVirt(time) + offset - now;
-  if (diff <= 60)  return '#F59E0B';
-  if (diff <= 180) return '#10B981';
-  return '#3B5BDB';
-}
-
-/* ── 드래그 타입 ── */
 interface CardAnchor {
   todoId: string;
   time: number;
-  centerY: number; // 드래그 시작 시 측정된 고정값
+  centerY: number;
 }
 
 interface DragState {
   todoId: string;
   originalTime: number;
   initialCardCenterY: number;
-  cardHeight: number;   // 카드 높이 + margin (드롭존 크기로 사용)
+  cardHeight: number;
   currentY: number;
-  anchors: CardAnchor[]; // 다른 카드들의 위치 스냅샷 (정렬됨)
+  anchors: CardAnchor[];
   containerTop: number;
   containerBottom: number;
   containerLeft: number;
@@ -83,7 +65,6 @@ interface UnscheduledDragState {
 
 const SNAP = 5;
 
-/** 앵커 기반 Y좌표 → 분 단위 시간 보간 (언스케줄 드래그용) */
 function calcTimeFromY(
   currentY: number,
   anchors: CardAnchor[],
@@ -93,7 +74,7 @@ function calcTimeFromY(
   const sorted = [...anchors].sort((a, b) => a.centerY - b.centerY);
   if (sorted.length === 0) {
     const t = Math.max(0, Math.min(1, (currentY - containerTop) / Math.max(1, containerBottom - containerTop)));
-    return snapTo(Math.round(DAY_START_MIN + t * (1439 - DAY_START_MIN))); // 4:00~23:59 범위
+    return snapTo(Math.round(DAY_START_MIN + t * (1439 - DAY_START_MIN)));
   }
   if (currentY <= sorted[0].centerY) {
     const t = Math.max(0, (currentY - containerTop) / Math.max(1, sorted[0].centerY - containerTop));
@@ -114,10 +95,9 @@ function calcTimeFromY(
       return snapTo(Math.max(minT, Math.min(maxT, minT + t * (maxT - minT))));
     }
   }
-  return snapTo(DAY_START_MIN + 480); // fallback: 12:00
+  return snapTo(DAY_START_MIN + 480);
 }
 
-/** 포인터 Y → 인접 두 카드 사이 시간 범위만 보간 */
 function calcProposedTime(ds: DragState): number {
   const { currentY, anchors, originalTime, containerTop, containerBottom } = ds;
   const sorted = [...anchors].sort((a, b) => a.centerY - b.centerY);
@@ -143,8 +123,7 @@ function calcProposedTime(ds: DragState): number {
       const maxT = below.time - SNAP;
       if (minT > maxT) return snapTo(above.time + Math.round((below.time - above.time) / 2));
       const t   = (currentY - above.centerY) / (below.centerY - above.centerY);
-      const raw = minT + t * (maxT - minT);
-      return snapTo(Math.max(minT, Math.min(maxT, raw)));
+      return snapTo(Math.max(minT, Math.min(maxT, minT + t * (maxT - minT))));
     }
   }
   return originalTime;
@@ -154,30 +133,24 @@ function snapTo(v: number): number {
   return Math.round(v / SNAP) * SNAP;
 }
 
-/**
- * 드롭존이 들어갈 위치: anchors 중 어떤 카드 "바로 앞"에 삽입되는지 todoId 반환
- * null이면 모든 카드 뒤에 삽입
- */
 function getInsertionBeforeId(currentY: number, anchors: CardAnchor[]): string | null {
   const sorted = [...anchors].sort((a, b) => a.centerY - b.centerY);
   for (const anchor of sorted) {
     if (currentY < anchor.centerY) return anchor.todoId;
   }
-  return null; // 가장 뒤에 삽입
+  return null;
 }
 
-/* ── 그립 아이콘 ── */
-function GripIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-      <circle cx="4" cy="2.5"  r="1.3" fill="currentColor" />
-      <circle cx="9" cy="2.5"  r="1.3" fill="currentColor" />
-      <circle cx="4" cy="6.5"  r="1.3" fill="currentColor" />
-      <circle cx="9" cy="6.5"  r="1.3" fill="currentColor" />
-      <circle cx="4" cy="10.5" r="1.3" fill="currentColor" />
-      <circle cx="9" cy="10.5" r="1.3" fill="currentColor" />
-    </svg>
-  );
+/* 시간 기반 색상 (TimelineView와 동일한 로직) */
+function eventColor(time: number | null, overdue: boolean, completed: boolean, now: number, day: string): string {
+  if (completed) return '#9CA3AF';
+  if (overdue)   return '#EF4444';
+  if (time === null) return '#7C3AED';
+  const offset = day === 'tomorrow' ? 1440 : 0;
+  const diff = toVirt(time) + offset - now;
+  if (diff <= 60)  return '#F59E0B';
+  if (diff <= 180) return '#10B981';
+  return '#3B5BDB';
 }
 
 const SECTION_MARKS = [
@@ -191,9 +164,9 @@ type Segment =
   | { type: 'now'; time: number; key: string }
   | { type: 'section'; label: string; key: string };
 
-interface TimelineViewProps { day: DayKey; }
+interface MixViewProps { day: DayKey; }
 
-export function TimelineView({ day }: TimelineViewProps) {
+export function MixView({ day }: MixViewProps) {
   const days           = useTodoStore((s) => s.days);
   const toggleComplete = useTodoStore((s) => s.toggleComplete);
   const deleteTodo     = useTodoStore((s) => s.deleteTodo);
@@ -212,7 +185,6 @@ export function TimelineView({ day }: TimelineViewProps) {
   useEffect(() => { unscheduledDragRef.current = unscheduledDrag; });
   useEffect(() => { swipeRef.current = swipe; });
 
-  /* ── 데이터 ── */
   const { scheduled, unscheduled } = useMemo(() => {
     const all = days[day];
     return {
@@ -282,7 +254,6 @@ export function TimelineView({ day }: TimelineViewProps) {
       return next;
     });
 
-  /* ── 드래그 시작 ── */
   const handleDragStart = (e: React.PointerEvent, todo: Todo) => {
     if (todo.time === null || !timelineRef.current || todo.completed) return;
     e.preventDefault();
@@ -304,7 +275,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       todoId: todo.id,
       originalTime: toVirt(todo.time!),
       initialCardCenterY: er ? er.top + er.height / 2 : e.clientY,
-      cardHeight: er ? er.height + 8 : 44, // +8 = margin-bottom
+      cardHeight: er ? er.height + 8 : 44,
       currentY: e.clientY,
       anchors,
       containerTop:    cr.top,
@@ -315,7 +286,6 @@ export function TimelineView({ day }: TimelineViewProps) {
     dragRef.current = ds;
   };
 
-  /* ── 스와이프 삭제 ── */
   const handleSwipeStart = (e: React.PointerEvent, todoId: string) => {
     if ((e.target as Element).closest('button')) return;
     const ds: SwipeState = { todoId, startX: e.clientX, startY: e.clientY, currentX: e.clientX, direction: 'undecided' };
@@ -323,7 +293,6 @@ export function TimelineView({ day }: TimelineViewProps) {
     swipeRef.current = ds;
   };
 
-  /* ── 언스케줄 드래그 시작 ── */
   const handleUnscheduledDragStart = (e: React.PointerEvent, todo: Todo) => {
     e.preventDefault();
     const tlEl = timelineRef.current;
@@ -349,7 +318,6 @@ export function TimelineView({ day }: TimelineViewProps) {
     unscheduledDragRef.current = ds;
   };
 
-  /* ── 스와이프 이동·종료 ── */
   useEffect(() => {
     if (!swipe) return;
     const onMove = (e: PointerEvent) => {
@@ -382,7 +350,6 @@ export function TimelineView({ day }: TimelineViewProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!swipe, day, deleteTodo]);
 
-  /* ── 드래그 이동·종료 ── */
   useEffect(() => {
     if (!drag) return;
     const onMove = (e: PointerEvent) =>
@@ -405,7 +372,6 @@ export function TimelineView({ day }: TimelineViewProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!drag, day, setTodoTime]);
 
-  /* ── 언스케줄 드래그 이동·종료 ── */
   useEffect(() => {
     if (!unscheduledDrag) return;
     const onMove = (e: PointerEvent) => {
@@ -440,7 +406,6 @@ export function TimelineView({ day }: TimelineViewProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!unscheduledDrag, day, setTodoTime]);
 
-  /* ── 드롭존 삽입 위치 계산 ── */
   const insertBeforeId = drag ? getInsertionBeforeId(drag.currentY, drag.anchors) : null;
 
   const isOverTl = unscheduledDrag
@@ -481,194 +446,182 @@ export function TimelineView({ day }: TimelineViewProps) {
             {isOverTl ? `${formatTime(unscheduledProposedTime!)} 에 배치` : '위로 드래그하여 시간 지정'}
           </div>
         )}
+
         {segments.map(seg => {
 
-            /* ── 섹션 구분선 ── */
-            if (seg.type === 'section') {
-              return (
-                <div key={seg.key} className={styles.sectionDivider}>
-                  <span className={styles.sectionLabel}>{seg.label}</span>
-                  <div className={styles.sectionLine} />
-                </div>
-              );
-            }
+          /* ── 섹션 구분선 ── */
+          if (seg.type === 'section') {
+            return (
+              <div key={seg.key} className={styles.sectionDivider}>
+                <span className={styles.sectionLabel}>{seg.label}</span>
+                <div className={styles.sectionLine} />
+              </div>
+            );
+          }
 
-            /* ── 갭 ── */
-            if (seg.type === 'gap') {
-              const isExp   = expandedGaps.has(seg.key);
-              const fromH   = Math.floor(seg.fromMin / 60) + 1;
-              const toH     = Math.floor(seg.toMin   / 60) - 1;
-              const skipped = Math.max(0, toH - fromH + 1);
-              if (skipped === 0) return null;
-              return (
-                <div key={seg.key} className={styles.gapRow}>
-                  <div className={styles.gapLine} />
-                  <button type="button" className={styles.gapButton}
-                    onClick={() => toggleGap(seg.key)} aria-expanded={isExp}>
-                    {isExp ? '접기 ▲' : `${skipped}시간 생략 ▼`}
-                  </button>
-                  {isExp && (
-                    <div className={styles.expandedHours}>
-                      {Array.from({ length: skipped }, (_, i) => {
-                        const h = fromH + i;
-                        return (
-                          <div key={h} className={styles.emptyHourRow}>
-                            <div className={styles.timeCol} style={{ paddingTop: 0 }}>
-                              <span className={styles.timeLabel}>{String(h % 24).padStart(2, '0')}:00</span>
-                              <div className={styles.dot} data-empty="true" />
-                            </div>
-                            <div className={styles.emptyHourLine} />
-                          </div>
-                        );
-                      })}
-                    </div>
+          /* ── 갭 ── */
+          if (seg.type === 'gap') {
+            const isExp   = expandedGaps.has(seg.key);
+            const fromH   = Math.floor(seg.fromMin / 60) + 1;
+            const toH     = Math.floor(seg.toMin   / 60) - 1;
+            const skipped = Math.max(0, toH - fromH + 1);
+            if (skipped === 0) return null;
+            return (
+              <div key={seg.key} className={styles.gapRow}>
+                <div className={styles.gapLine} />
+                <button type="button" className={styles.gapButton}
+                  onClick={() => toggleGap(seg.key)} aria-expanded={isExp}>
+                  {isExp ? '접기 ▲' : `${skipped}시간 생략 ▼`}
+                </button>
+                {isExp && (
+                  <div className={styles.expandedHours}>
+                    {Array.from({ length: skipped }, (_, i) => {
+                      const h = fromH + i;
+                      return (
+                        <div key={h} className={styles.emptyHourRow}>
+                          <span className={styles.emptyHourLabel}>
+                            {String(h % 24).padStart(2, '0')}:00
+                          </span>
+                          <div className={styles.emptyHourLine} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          /* ── 현재 시간 인디케이터 ── */
+          if (seg.type === 'now') {
+            return (
+              <div key="now" className={styles.nowRow}>
+                <div className={styles.nowTimeArea}>
+                  <span className={styles.nowBadge}>{formatTime(seg.time)}</span>
+                </div>
+                <div className={styles.nowLine} />
+              </div>
+            );
+          }
+
+          /* ── 이벤트 카드 ── */
+          const { todo }   = seg;
+          const isDragging = drag?.todoId === todo.id;
+
+          const showDropZoneHere =
+            showDropZone && !isDragging && !dropZoneRendered && todo.id === effectiveInsertBeforeId;
+          if (showDropZoneHere) dropZoneRendered = true;
+
+          const virtTodoTime = toVirt(todo.time!);
+          const displayTime = isDragging ? calcProposedTime(drag!) : virtTodoTime;
+          const isOverdue   = !todo.completed && todo.time !== null
+                            && day === 'today' && virtTodoTime < now && !isDragging;
+          const color = eventColor(todo.time, isOverdue, todo.completed, now, day);
+          const translateY  = isDragging && drag
+            ? drag.currentY - drag.initialCardCenterY
+            : 0;
+          const isDragOutside = isDragging && drag
+            ? drag.currentY < drag.containerTop || drag.currentY > drag.containerBottom
+            : false;
+
+          const isSwipingThis = swipe?.todoId === todo.id && swipe.direction !== 'v';
+          const swipeOffset   = isSwipingThis ? Math.min(0, swipe!.currentX - swipe!.startX) : 0;
+          const deleteProgress = Math.min(1, -swipeOffset / 72);
+
+          const card = (
+            <div
+              data-todo-id={todo.id}
+              className={`${styles.eventRow}
+                ${todo.completed ? styles.eventCompleted : ''}
+                ${isDragging    ? styles.eventRowDragging : ''}`}
+              style={isDragging
+                ? { transform: `translateY(${translateY}px)`, zIndex: 50 }
+                : undefined}
+            >
+              {/* 스와이프 삭제 힌트 */}
+              {isSwipingThis && swipeOffset < -12 && (
+                <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgress }}>×</div>
+              )}
+
+              {/* 카드: 시간 레이블 포함 */}
+              <div
+                className={`${styles.card} ${isDragging ? styles.cardDragging : ''} ${isDragOutside ? styles.cardDragOutside : ''} ${todo.endTime != null ? styles.cardRange : ''}`}
+                onPointerDown={e => handleSwipeStart(e, todo.id)}
+                style={{
+                  transform: `translateX(${swipeOffset}px)`,
+                  transition: isSwipingThis ? 'none' : 'transform 200ms ease, box-shadow 150ms',
+                }}
+              >
+                {/* 시간 레이블 (카드 내 좌측) */}
+                <div className={styles.timeWrap}>
+                  <span className={`${styles.timeLabel} ${isOverdue ? styles.timeLabelOverdue : ''} ${isDragging ? styles.timeLabelDragging : ''}`}>
+                    {formatTime(displayTime)}
+                  </span>
+                  {todo.endTime != null && !isDragging && (
+                    <span className={styles.timeEnd}>-{formatTime(todo.endTime)}</span>
                   )}
                 </div>
-              );
-            }
 
-            /* ── 현재 시간 인디케이터 ── */
-            if (seg.type === 'now') {
-              return (
-                <div key="now" className={styles.nowRow}>
-                  <div className={styles.nowBadge}>
-                    <span className={styles.nowBadgeInner}>{formatTime(seg.time)}</span>
-                  </div>
-                  <div className={styles.nowLine} />
-                </div>
-              );
-            }
-
-            /* ── 이벤트 카드 ── */
-            const { todo }   = seg;
-            const isDragging = drag?.todoId === todo.id;
-
-            // 드롭존: 이 카드 바로 앞에 삽입
-            const showDropZoneHere =
-              showDropZone && !isDragging && !dropZoneRendered && todo.id === effectiveInsertBeforeId;
-            if (showDropZoneHere) dropZoneRendered = true;
-
-            const virtTodoTime = toVirt(todo.time!);
-            const displayTime = isDragging ? calcProposedTime(drag!) : virtTodoTime;
-            const isOverdue   = !todo.completed && todo.time !== null
-                              && day === 'today' && virtTodoTime < now && !isDragging;
-            const color       = eventColor(todo.time, isOverdue, todo.completed, now, day);
-            const isCurrent   = !isDragging && todo.time !== null
-                              && virtTodoTime <= now && now < virtTodoTime + 60;
-            const translateY  = isDragging && drag
-              ? drag.currentY - drag.initialCardCenterY
-              : 0;
-
-            const isSwipingThis = swipe?.todoId === todo.id && swipe.direction !== 'v';
-            const swipeOffset   = isSwipingThis ? Math.min(0, swipe!.currentX - swipe!.startX) : 0;
-            const deleteProgress = Math.min(1, -swipeOffset / 72);
-
-            const isDragOutside = isDragging && drag
-              ? drag.currentY < drag.containerTop || drag.currentY > drag.containerBottom
-              : false;
-
-            const card = (
-              <div
-                data-todo-id={todo.id}
-                className={`${styles.eventRow}
-                  ${todo.completed ? styles.eventCompleted : ''}
-                  ${isDragging    ? styles.eventRowDragging : ''}`}
-                style={isDragging
-                  ? { transform: `translateY(${translateY}px)`, zIndex: 50 }
-                  : undefined}
-              >
-                {/* 시간 컬럼 */}
-                <div className={`${styles.timeCol} ${todo.endTime != null ? styles.timeColRange : ''}`}>
-                  <div className={styles.timeLabelGroup}>
-                    <span className={`${styles.timeLabel}
-                      ${isDragging ? styles.timeLabelDragging : ''}
-                      ${isOverdue  ? styles.timeLabelOverdue  : ''}`}>
-                      {formatTime(displayTime)}
-                    </span>
-                    {todo.endTime != null && !isDragging && (
-                      <span className={styles.timeEnd}>-{formatTime(todo.endTime)}</span>
-                    )}
-                  </div>
-                  <div
-                    className={`${styles.dot}
-                      ${isCurrent  ? styles.dotCurrent  : ''}
-                      ${isDragging ? styles.dotDragging  : ''}`}
-                    style={{
-                      borderColor:     isDragging ? '#3B5BDB' : color,
-                      backgroundColor: (isCurrent || isDragging)
-                        ? (isDragging ? '#3B5BDB' : color) : undefined,
-                    }}
-                  />
-                </div>
-
-                {/* 스와이프 삭제 힌트 */}
-                {isSwipingThis && swipeOffset < -12 && (
-                  <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgress }}>×</div>
-                )}
-
-                {/* 카드 */}
-                <div
-                  className={`${styles.card} ${isDragging ? styles.cardDragging : ''} ${isDragOutside ? styles.cardDragOutside : ''}`}
-                  onPointerDown={e => handleSwipeStart(e, todo.id)}
-                  style={{
-                    borderLeftColor: isDragOutside ? '#9CA3AF' : isDragging ? '#3B5BDB' : color,
-                    transform: `translateX(${swipeOffset}px)`,
-                    transition: isSwipingThis ? 'none' : 'transform 200ms ease, box-shadow 150ms, border-left-color 150ms',
-                  }}
+                {/* 체크박스 - 테두리/배경에 시간 기반 색상 적용 */}
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={todo.completed}
+                  aria-label={todo.completed ? '완료 취소' : '완료 처리'}
+                  className={`${styles.checkbox} ${todo.completed ? styles.checkboxChecked : ''}`}
+                  onClick={() => toggleComplete(day, todo.id)}
                 >
-                  <button type="button"
-                    className={`${styles.checkBtn} ${todo.completed ? styles.checkBtnDone : ''}`}
-                    style={{ borderColor: color, backgroundColor: todo.completed ? color : undefined }}
-                    onClick={() => toggleComplete(day, todo.id)}
-                    aria-label={todo.completed ? '완료 취소' : '완료'}>
-                    {todo.completed && (
-                      <svg width="8" height="8" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                        <path d="M1.5 5L4 7.5L8.5 2.5" stroke="#fff" strokeWidth="2"
-                          strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </button>
-                  <div className={styles.cardContent}>
-                    <p className={`${styles.cardTitle} ${todo.completed ? styles.cardTitleDone : ''}`}>
-                      {todo.text || <span className={styles.noText}>(내용 없음)</span>}
-                    </p>
-                    {isOverdue && <span className={styles.overdueBadge}>지남</span>}
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.cardDragHandle}
-                    onPointerDown={e => handleDragStart(e, todo)}
-                    aria-label="드래그로 시간 변경"
-                    style={{ touchAction: 'none' }}
-                  >
-                    <GripIcon />
-                  </button>
-                </div>
-              </div>
-            );
-
-            return (
-              <div key={todo.id}>
-                {/* 드롭존: 이 카드 위에 공간을 열어 아래 카드들이 내려감 */}
-                {showDropZoneHere && (
-                  <div
-                    className={styles.dropZone}
-                    style={{ height: dropZoneHeight }}
+                  <span
+                    className={styles.checkboxInner}
+                    style={{
+                      borderColor: color,
+                      backgroundColor: todo.completed ? color : undefined,
+                    }}
+                    aria-hidden="true"
                   />
+                </button>
+
+                {/* 텍스트 */}
+                <div className={styles.textWrap}>
+                  <span className={`${styles.cardTitle} ${todo.completed ? styles.cardTitleDone : ''}`}>
+                    {todo.text || <span className={styles.noText}>(내용 없음)</span>}
+                  </span>
+                </div>
+
+                {/* ! 배지 (지남 표시) */}
+                {isOverdue && (
+                  <span className={styles.warnBadge} aria-label="시간이 지났습니다">!</span>
                 )}
 
-                {/* 드래그 중인 카드: 레이아웃 공간 0 (아래 카드들이 올라옴) */}
-                {isDragging
-                  ? <div style={{ height: 0, overflow: 'visible' }}>{card}</div>
-                  : card}
+                {/* 그립 핸들 (오른쪽, 2선 스타일) */}
+                <button
+                  type="button"
+                  className={styles.dragHandle}
+                  onPointerDown={e => { e.stopPropagation(); handleDragStart(e, todo); }}
+                  aria-label="드래그로 시간 변경"
+                  style={{ touchAction: 'none' }}
+                >
+                  <span className={styles.handleIcon} aria-hidden="true" />
+                </button>
               </div>
-            );
-          })}
+            </div>
+          );
 
-          {/* 드롭존: 모든 카드 뒤에 삽입하는 경우 */}
-          {showDropZone && !dropZoneRendered && effectiveInsertBeforeId === null && scheduled.length > 0 && (
-            <div className={styles.dropZone} style={{ height: dropZoneHeight }} />
-          )}
+          return (
+            <div key={todo.id}>
+              {showDropZoneHere && (
+                <div className={styles.dropZone} style={{ height: dropZoneHeight }} />
+              )}
+              {isDragging
+                ? <div style={{ height: 0, overflow: 'visible' }}>{card}</div>
+                : card}
+            </div>
+          );
+        })}
+
+        {showDropZone && !dropZoneRendered && effectiveInsertBeforeId === null && scheduled.length > 0 && (
+          <div className={styles.dropZone} style={{ height: dropZoneHeight }} />
+        )}
       </div>
 
       {/* 플로팅 시간 인디케이터 */}
@@ -680,7 +633,6 @@ export function TimelineView({ day }: TimelineViewProps) {
         </div>
       )}
 
-      {/* 언스케줄 드래그: 플로팅 인디케이터 + 고스트 */}
       {unscheduledDrag && isOverTl && unscheduledProposedTime !== null && (
         <div className={styles.floatingIndicator}
           style={{ top: unscheduledDrag.currentY, left: unscheduledDrag.timelineLeft }}>
@@ -703,8 +655,8 @@ export function TimelineView({ day }: TimelineViewProps) {
           <h3 className={styles.unscheduledTitle}>시간 미지정</h3>
           <div className={styles.unscheduledList}>
             {unscheduled.map(todo => {
-              const isSwipingU     = swipe?.todoId === todo.id && swipe.direction !== 'v';
-              const swipeOffsetU   = isSwipingU ? Math.min(0, swipe!.currentX - swipe!.startX) : 0;
+              const isSwipingU      = swipe?.todoId === todo.id && swipe.direction !== 'v';
+              const swipeOffsetU    = isSwipingU ? Math.min(0, swipe!.currentX - swipe!.startX) : 0;
               const deleteProgressU = Math.min(1, -swipeOffsetU / 72);
               return (
                 <div key={todo.id} style={{ position: 'relative' }}>
@@ -719,29 +671,32 @@ export function TimelineView({ day }: TimelineViewProps) {
                       transition: isSwipingU ? 'none' : 'transform 200ms ease',
                     }}
                   >
-                    <button type="button"
-                      className={`${styles.checkBtn} ${todo.completed ? styles.checkBtnDone : ''}`}
-                      style={{ borderColor: todo.completed ? '#9CA3AF' : '#7C3AED',
-                               backgroundColor: todo.completed ? '#9CA3AF' : undefined }}
+                    {/* 체크박스 */}
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={todo.completed}
+                      aria-label={todo.completed ? '완료 취소' : '완료 처리'}
+                      className={`${styles.checkbox} ${todo.completed ? styles.checkboxChecked : ''}`}
                       onClick={() => toggleComplete(day, todo.id)}
-                      aria-label={todo.completed ? '완료 취소' : '완료'}>
-                      {todo.completed && (
-                        <svg width="8" height="8" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                          <path d="M1.5 5L4 7.5L8.5 2.5" stroke="#fff" strokeWidth="2"
-                            strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
+                    >
+                      <span className={styles.checkboxInner} aria-hidden="true" />
                     </button>
-                    <span className={styles.unscheduledText}>{todo.text}</span>
+
+                    <span className={`${styles.unscheduledText} ${todo.completed ? styles.unscheduledTextDone : ''}`}>
+                      {todo.text}
+                    </span>
+
+                    {/* 그립 (오른쪽, 2선) */}
                     {!todo.completed && (
                       <button
                         type="button"
-                        className={styles.cardDragHandle}
-                        onPointerDown={e => handleUnscheduledDragStart(e, todo)}
+                        className={styles.dragHandle}
+                        onPointerDown={e => { e.stopPropagation(); handleUnscheduledDragStart(e, todo); }}
                         aria-label="드래그로 시간 지정"
                         style={{ touchAction: 'none' }}
                       >
-                        <GripIcon />
+                        <span className={styles.handleIcon} aria-hidden="true" />
                       </button>
                     )}
                   </div>

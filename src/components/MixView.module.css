@@ -2,7 +2,6 @@
   padding: 8px 0 16px;
 }
 
-/* 드래그 중 스크롤 방지 */
 .containerDragging {
   user-select: none;
   -webkit-user-select: none;
@@ -11,22 +10,28 @@
 /* ── 타임라인 ── */
 .timeline {
   position: relative;
-  padding-left: 64px;
-  padding-right: 20px;
+  padding: 0 16px;
+  /* ul.list와 동일한 좌우 패딩 → 체크박스 위치 일치 */
 }
 
+/*
+  세로선: 목록뷰 체크박스 중앙 위치와 동일하게 정렬
+  timeline.pad(16) + card.pad(10) + time(40) + gap(10) + checkbox_half(12) = 88px
+  ::before left = 88 - 1 = 87px (2px 선의 중심이 88px)
+*/
 .timeline::before {
   content: '';
   position: absolute;
-  left: 58px;
-  top: 12px;
-  bottom: 12px;
+  left: 87px;
+  top: 0;
+  bottom: 0;
   width: 2px;
   background: var(--color-line);
   border-radius: 1px;
+  z-index: 0;
 }
 
-/* ── 드롭존 (드래그 중 삽입 위치를 시각적으로 표시) ── */
+/* ── 드롭존 ── */
 .dropZone {
   border-radius: var(--radius-md, 8px);
   border: 2px dashed var(--color-accent);
@@ -45,18 +50,16 @@
 
 /* ── 섹션 구분선 ── */
 .sectionDivider {
-  position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
   margin: 10px 0 8px;
 }
 
 .sectionLabel {
-  position: absolute;
-  left: -64px;
-  width: 64px;
+  flex: 0 0 auto;
+  width: 50px; /* card padding(10) + timeLabel(40) */
   text-align: right;
-  padding-right: 8px;
   font-size: 11px;
   font-weight: 600;
   color: var(--color-text-muted);
@@ -73,10 +76,8 @@
 /* ── 이벤트 행 ── */
 .eventRow {
   position: relative;
-  display: flex;
-  align-items: flex-start;
+  z-index: 1;
   margin-bottom: 8px;
-  transition: none;
 }
 
 .eventCompleted {
@@ -86,34 +87,50 @@
 .eventRowDragging {
   filter: drop-shadow(0 8px 24px rgba(59, 91, 219, 0.25));
   will-change: transform;
-  /* 드래그 중인 카드는 transition 없이 즉시 이동 */
   transition: none !important;
 }
 
-/* ── 시간 컬럼 ── */
-.timeCol {
-  position: absolute;
-  left: -64px;
-  top: 0;
-  width: 64px;
+/* ── 카드 (목록뷰 TodoItem과 동일한 padding/gap) ── */
+.card {
+  background-color: var(--color-bg-card, #FFFFFF);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 5px 12px 5px 10px;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding-top: 8px;
+  gap: 10px;
+  min-height: 36px;
+  transition: box-shadow 150ms;
 }
 
-/* 구간 일정: 상단 정렬로 dot이 시작 시간에 붙음 */
-.timeColRange {
+.cardDragging {
+  box-shadow: 0 12px 32px rgba(59, 91, 219, 0.2);
+}
+
+/* 구간 일정: 상단 정렬 + 내부 요소 margin-top 보정 */
+.cardRange {
   align-items: flex-start;
 }
 
-/* 시간 텍스트 묶음 (단일·구간 공통) */
-.timeLabelGroup {
-  flex: 1;
+.cardRange .checkbox,
+.cardRange .textWrap,
+.cardRange .warnBadge,
+.cardRange .dragHandle {
+  margin-top: 4px;
+}
+
+.cardDragOutside {
+  opacity: 0.5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ── 시간 레이블 래퍼 (목록뷰 .timeWrap과 동일) ── */
+.timeWrap {
+  flex: 0 0 auto;
+  width: 40px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 3px;
 }
 
 .timeLabel {
@@ -122,7 +139,6 @@
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
-  text-align: right;
   white-space: nowrap;
   line-height: 1;
   transition: color 100ms, font-size 100ms;
@@ -137,117 +153,74 @@
   letter-spacing: -0.3px;
   white-space: nowrap;
   line-height: 1;
+  margin-top: 3px;
 }
 
 .timeLabelOverdue {
-  color: var(--color-event-red);
+  color: var(--color-event-red, #EF4444);
 }
 
-/* 드래그 중: 시간 레이블을 강조 (휠 인디케이터 역할) */
 .timeLabelDragging {
   color: var(--color-accent);
   font-size: 13px;
   font-weight: 800;
 }
 
-/* ── 타임라인 점 ── */
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid var(--color-text-muted);
-  background-color: var(--color-bg);
+/* ── 체크박스 (목록뷰 스타일, 세로선 위치에 배치) ── */
+.checkbox {
   flex: 0 0 auto;
-  position: relative;
-  z-index: 1;
-  transition: background-color 100ms, border-color 100ms, transform 100ms;
-}
-
-.dotCurrent {
-  width: 12px;
-  height: 12px;
-  box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.2);
-}
-
-.dotDragging {
-  width: 12px;
-  height: 12px;
-  transform: scale(1.3);
-  box-shadow: 0 0 0 4px rgba(59, 91, 219, 0.2);
-}
-
-/* ── 이벤트 카드 ── */
-.card {
-  flex: 1 1 auto;
-  background-color: var(--color-bg-card, #FFFFFF);
-  border-radius: var(--radius-md, 8px);
-  border-left: 3px solid var(--color-event-blue);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding: 5px 18px 5px 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  transition: box-shadow 150ms, border-left-color 150ms;
-}
-
-.cardDragging {
-  box-shadow: 0 12px 32px rgba(59, 91, 219, 0.2);
-  border-left-color: var(--color-accent) !important;
-}
-
-.cardDragOutside {
-  opacity: 0.5;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-left-color: #9CA3AF !important;
-}
-
-/* ── 그립 핸들 ── */
-.cardDragHandle {
-  flex: 0 0 auto;
-  width: 20px;
+  width: 24px;
   height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-line);
-  cursor: grab;
-  touch-action: none;
-  border-radius: var(--radius-sm, 4px);
-  transition: color 120ms;
 }
 
-.card:hover .cardDragHandle {
-  color: var(--color-text-muted);
+.checkboxInner {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-text-muted, #8A8A82);
+  border-radius: 50%;
+  background-color: transparent;
+  transition: background-color 120ms ease, border-color 120ms ease;
+  position: relative;
 }
 
-.cardDragHandle:active {
-  cursor: grabbing;
-  color: var(--color-accent);
+.checkboxChecked .checkboxInner {
+  background-color: var(--color-accent, #3B5BDB);
+  border-color: var(--color-accent, #3B5BDB);
 }
 
-/* 완료된 카드의 드래그 핸들 비활성화 */
-.eventCompleted .cardDragHandle {
-  cursor: not-allowed;
-  opacity: 0.3;
-  pointer-events: none;
+.checkboxChecked .checkboxInner::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 5px;
+  height: 8px;
+  border-right: 2px solid #FFFFFF;
+  border-bottom: 2px solid #FFFFFF;
+  transform: rotate(45deg);
 }
 
-.cardContent {
+/* ── 텍스트 ── */
+.textWrap {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .cardTitle {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
   line-height: 1.3;
   word-break: break-word;
+  text-align: left;
 }
 
 .cardTitleDone {
@@ -261,42 +234,74 @@
   font-weight: 400;
 }
 
-.overdueBadge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background-color: #FEE2E2;
-  color: var(--color-event-red);
-  font-size: 11px;
-  font-weight: 600;
+/* ── ! 배지 (목록뷰 warnBadge) ── */
+.warnBadge {
   flex: 0 0 auto;
-  align-self: center;
-}
-
-.cardActions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-  margin-left: auto;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--color-warn, #D48806);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.checkBtn {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1.5px solid var(--color-accent);
-  background-color: transparent;
+/* ── 그립 핸들 (오른쪽, 2선 스타일) ── */
+.dragHandle {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
-  transition: all 120ms ease;
+  color: var(--color-line);
+  cursor: grab;
+  touch-action: none;
+  border-radius: var(--radius-sm, 4px);
+  transition: color 120ms;
 }
 
-.checkBtnDone {
-  background-color: var(--color-accent);
+.card:hover .dragHandle,
+.unscheduledItem:hover .dragHandle {
+  color: var(--color-text-muted);
 }
+
+.dragHandle:active {
+  cursor: grabbing;
+  color: var(--color-accent);
+}
+
+.eventCompleted .dragHandle {
+  cursor: not-allowed;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* 2선 핸들 아이콘 (목록뷰와 동일) */
+.handleIcon {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 12px;
+}
+
+.handleIcon::before,
+.handleIcon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background-color: currentColor;
+  border-radius: 1px;
+}
+
+.handleIcon::before { top: 3px; }
+.handleIcon::after  { bottom: 3px; }
 
 /* ── 스와이프 삭제 힌트 ── */
 .swipeDeleteHint {
@@ -315,11 +320,11 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  z-index: 0;
+  z-index: 2;
   line-height: 1;
 }
 
-/* ── 플로팅 시간 인디케이터 (드래그 중) ── */
+/* ── 플로팅 시간 인디케이터 ── */
 .floatingIndicator {
   position: fixed;
   z-index: 200;
@@ -327,7 +332,6 @@
   display: flex;
   align-items: center;
   transform: translateY(-50%);
-  gap: 0;
 }
 
 .floatingPill {
@@ -352,33 +356,30 @@
   flex: 0 0 auto;
 }
 
-/* ── 현재 시간 인디케이터 ── */
+/* ── 현재 시간 인디케이터 (sectionDivider와 동일한 레이아웃) ── */
 .nowRow {
-  position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
   margin: 6px 0 8px;
   z-index: 4;
 }
 
-.nowBadge {
-  position: absolute;
-  left: -64px;
-  width: 64px;
+/* sectionLabel과 동일한 50px 컨테이너, 배지를 오른쪽 정렬 */
+.nowTimeArea {
+  flex: 0 0 50px;
   display: flex;
   justify-content: flex-end;
-  align-items: center;
-  padding-right: 6px; /* 64-6=58px → 세로선에 맞닿음 */
 }
 
-.nowBadgeInner {
+.nowBadge {
   background: #EF4444;
   color: #FFFFFF;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
-  padding: 2px 6px 2px 4px; /* right 6px → 텍스트 우측 58-6=52px (시간 정렬 일치) */
+  padding: 2px 5px;
   border-radius: 4px;
   box-shadow: 0 1px 6px rgba(239, 68, 68, 0.3);
   white-space: nowrap;
@@ -388,9 +389,8 @@
 .nowLine {
   flex: 1;
   height: 2px;
-  background: linear-gradient(to right, #EF4444, rgba(239, 68, 68, 0.2));
+  background: linear-gradient(to right, #EF4444, rgba(239, 68, 68, 0.15));
   border-radius: 1px;
-  margin-left: -6px; /* 64-6=58px → 배지 우측에 맞닿음 */
 }
 
 /* ── 갭 ── */
@@ -401,7 +401,7 @@
 
 .gapLine {
   position: absolute;
-  left: -6px;
+  left: 87px; /* 세로선과 동일 위치 */
   opacity: 0.4;
   top: 0;
   bottom: 0;
@@ -441,15 +441,22 @@
   display: flex;
   align-items: center;
   height: 22px;
-  margin-bottom: 0;
-  position: relative;
+}
+
+.emptyHourLabel {
+  width: 50px; /* card_pad(10) + timeLabel(40) */
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  padding-right: 8px;
 }
 
 .emptyHourLine {
   flex: 1;
   height: 1px;
   background: var(--color-line);
-  margin-left: 8px;
 }
 
 /* ── 빈 상태 ── */
@@ -477,7 +484,7 @@
   line-height: 1.5;
 }
 
-/* ── 시간 미지정 ── */
+/* ── 시간 미지정 (TimelineView와 동일한 수치) ── */
 .unscheduled {
   margin-top: 24px;
   padding: 0 20px;
@@ -509,10 +516,24 @@
 }
 
 .unscheduledItemDone { opacity: 0.6; }
-
 .unscheduledItemDragging { opacity: 0.3; }
 
-/* ── 시간 미지정 → 타임라인 드롭 영역 ── */
+.unscheduledText {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 0;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.unscheduledTextDone {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+/* ── 빈 타임라인 드롭 영역 ── */
 .emptyTimelineDrop {
   padding: 18px 16px;
   text-align: center;
@@ -549,19 +570,4 @@
   text-overflow: ellipsis;
   box-shadow: 0 4px 16px rgba(59, 91, 219, 0.3);
   transform: translateY(-130%);
-}
-
-.unscheduledText {
-  flex: 1 1 auto;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-  min-width: 0;
-  word-break: break-word;
-  line-height: 1.3;
-}
-
-.unscheduledItemDone .unscheduledText {
-  text-decoration: line-through;
-  color: var(--color-text-muted);
 }

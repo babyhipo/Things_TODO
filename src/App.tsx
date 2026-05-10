@@ -6,6 +6,7 @@ import { ListToolbar } from './components/ListToolbar';
 import { TodoList } from './components/TodoList';
 import { TodoInput } from './components/TodoInput';
 import { TimelineView } from './components/TimelineView';
+import { MixView } from './components/MixView';
 import { TemplatePanel } from './components/templates/TemplatePanel';
 import { useDayRollover } from './hooks/useDayRollover';
 import { useSeedTemplates } from './components/templates/useSeedTemplates';
@@ -27,14 +28,15 @@ function App() {
   return (
     <AppShell
       header={<FolderTabs activeTab={activeTab} onChange={(tab) => setStoreDay(tab)} />}
-      footer={
-        <TodoInput onTemplateClick={() => setTemplateOpen(true)} />
-      }
+      footer={<TodoInput onTemplateClick={() => setTemplateOpen(true)} />}
+      contentInset={52}
     >
       <ListToolbar day={activeStoreDay} />
 
       {contentView === 'timetable' ? (
         <TimelineView day={activeStoreDay} />
+      ) : contentView === 'mix' ? (
+        <MixView day={activeStoreDay} />
       ) : (
         <TodoList />
       )}
