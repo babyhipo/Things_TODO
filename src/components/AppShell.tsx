@@ -6,9 +6,10 @@ interface AppShellProps {
   children: ReactNode;
   footer?: ReactNode;
   bottomNav?: ReactNode;
+  contentInset?: number; // footer 위에 떠있는 고정 요소의 추가 여백(px)
 }
 
-export function AppShell({ header, children, footer, bottomNav }: AppShellProps) {
+export function AppShell({ header, children, footer, bottomNav, contentInset = 0 }: AppShellProps) {
   return (
     <div className={styles.outer}>
       <div className={styles.app}>
@@ -20,6 +21,7 @@ export function AppShell({ header, children, footer, bottomNav }: AppShellProps)
             paddingBottom: `calc(
               ${bottomNav ? 'var(--bottom-nav-height, 64px)' : '0px'}
               + ${footer ? '68px' : '0px'}
+              + ${contentInset > 0 ? `${contentInset}px` : '0px'}
               + env(safe-area-inset-bottom)
             )`,
           }}

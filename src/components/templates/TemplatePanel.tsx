@@ -102,6 +102,7 @@ function TemplatePanelContent({ onClose, embedded }: { onClose?: () => void; emb
   const templates = useTodoStore((s) => s.templates);
   const activeDay = useTodoStore((s) => s.activeDay);
   const applyTemplate = useTodoStore((s) => s.applyTemplate);
+  const setActiveDay = useTodoStore((s) => s.setActiveDay);
   const saveAsTemplate = useTodoStore((s) => s.saveAsTemplate);
   const deleteTemplate = useTodoStore((s) => s.deleteTemplate);
   const reorderTemplates = useTodoStore((s) => s.reorderTemplates);
@@ -126,7 +127,9 @@ function TemplatePanelContent({ onClose, embedded }: { onClose?: () => void; emb
   };
 
   const handleApply = (templateId: string, day?: DayKey) => {
-    applyTemplate(day ?? activeDay, templateId);
+    const targetDay = day ?? activeDay;
+    applyTemplate(targetDay, templateId);
+    setActiveDay(targetDay);
     if (!embedded) onClose?.();
   };
 

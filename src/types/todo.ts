@@ -4,6 +4,7 @@ export interface Todo {
   id: string;
   text: string;
   time: number | null;
+  endTime?: number | null;
   completed: boolean;
   parentId: string | null;
   order: number;
