@@ -13,7 +13,10 @@ interface TodoState {
 
   setActiveDay: (day: DayKey) => void;
 
-  addTodo: (day: DayKey, rawText: string) => void;
+  pendingParentId: string | null;
+  setPendingParentId: (id: string | null) => void;
+
+  addTodo: (day: DayKey, rawText: string, meridiemHint?: 'am' | 'pm', parentId?: string | null) => void;
   updateTodoText: (day: DayKey, id: string, rawText: string) => void;
   toggleComplete: (day: DayKey, id: string) => void;
   deleteTodo: (day: DayKey, id: string) => void;
@@ -33,6 +36,7 @@ interface TodoState {
   reorderTemplates: (newOrderIds: string[]) => void;
   createEmptyTemplate: () => string;
   setTodoTime: (day: DayKey, id: string, time: number | null) => void;
+  setParentId: (day: DayKey, id: string, parentId: string | null) => void;
 
   performRolloverIfNeeded: () => void;
 }
@@ -73,19 +77,27 @@ export const useTodoStore = create<TodoState>()(
       templates: [],
       activeDay: 'today',
       lastRolloverDate: getLogicalDate(),
+      pendingParentId: null,
 
       setActiveDay: (day) => set({ activeDay: day }),
+      setPendingParentId: (id) => set({ pendingParentId: id }),
 
-      addTodo: (day, rawText) => {
+      addTodo: (day, rawText, meridiemHint, parentId) => {
         const { time, endTime, cleanText } = parseTime(rawText);
         if (!cleanText && time === null) return;
+        let adjustedTime = time;
+        let adjustedEndTime = endTime ?? null;
+        if (meridiemHint === 'pm' && adjustedTime !== null && adjustedTime < 720) {
+          adjustedTime += 720;
+          if (adjustedEndTime !== null && adjustedEndTime < 720) adjustedEndTime += 720;
+        }
         const newTodo: Todo = {
           id: newId(),
           text: cleanText,
-          time,
-          endTime: endTime ?? null,
+          time: adjustedTime,
+          endTime: adjustedEndTime,
           completed: false,
-          parentId: null,
+          parentId: parentId ?? null,
           order: 0,
           createdAt: new Date().toISOString(),
         };
@@ -301,6 +313,15 @@ export const useTodoStore = create<TodoState>()(
           days: {
             ...state.days,
             [day]: state.days[day].map((t) => (t.id === id ? { ...t, time } : t)),
+          },
+        }));
+      },
+
+      setParentId: (day, id, parentId) => {
+        set((state) => ({
+          days: {
+            ...state.days,
+            [day]: state.days[day].map((t) => (t.id === id ? { ...t, parentId } : t)),
           },
         }));
       },

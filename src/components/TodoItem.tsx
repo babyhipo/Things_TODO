@@ -16,6 +16,7 @@ interface TodoItemProps {
   todo: Todo;
   day: DayKey;
   now: number;
+  gapAfter?: number;
 }
 
 function buildEditableValue(todo: Todo): string {
@@ -28,12 +29,14 @@ function buildEditableValue(todo: Todo): string {
   return todo.text;
 }
 
-export function TodoItem({ todo, day, now }: TodoItemProps) {
+export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
   const toggleComplete = useTodoStore((s) => s.toggleComplete);
   const deleteTodo = useTodoStore((s) => s.deleteTodo);
   const updateTodoText = useTodoStore((s) => s.updateTodoText);
   const indentTodo = useTodoStore((s) => s.indentTodo);
   const outdentTodo = useTodoStore((s) => s.outdentTodo);
+  const pendingParentId = useTodoStore((s) => s.pendingParentId);
+  const setPendingParentId = useTodoStore((s) => s.setPendingParentId);
 
   const {
     attributes,
@@ -47,7 +50,6 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string>(() => buildEditableValue(todo));
   const inputRef = useRef<HTMLInputElement | null>(null);
-  // 편집 취소(Escape) 시 blur 저장 로직이 실행되지 않도록 플래그로 구분
   const cancelRef = useRef(false);
 
   useEffect(() => {
@@ -68,11 +70,13 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : undefined,
+    opacity: isDragging ? 0 : undefined,
     zIndex: isDragging ? 2 : undefined,
+    marginBottom: gapAfter,
   };
 
   const isSub = todo.parentId !== null;
+  const isSelected = pendingParentId === todo.id;
   const isOverdue =
     !todo.completed &&
     todo.time !== null &&
@@ -147,15 +151,22 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
     }
   };
 
+  const handleAddSub = () => {
+    setPendingParentId(isSelected ? null : todo.id);
+  };
+
   return (
     <li
       ref={setNodeRef}
       style={style}
-      className={`${styles.item} ${isSub ? styles.itemSub : ''} ${
-        isDragging ? styles.itemDragging : ''
-      } ${todo.completed ? styles.itemCompleted : ''} ${
-        todo.endTime != null ? styles.itemRange : ''
-      }`}
+      className={[
+        styles.item,
+        isSub ? styles.itemSub : '',
+        isDragging ? styles.itemDragging : '',
+        todo.completed ? styles.itemCompleted : '',
+        todo.endTime != null ? styles.itemRange : '',
+        isSelected ? styles.itemSelected : '',
+      ].filter(Boolean).join(' ')}
       onKeyDown={handleRowKeyDown}
       {...attributes}
     >
@@ -238,6 +249,18 @@ export function TodoItem({ todo, day, now }: TodoItemProps) {
         <span className={styles.warnBadge} aria-label="시간이 지났습니다">
           !
         </span>
+      ) : null}
+
+      {/* 하위 일정 추가 버튼 (루트 아이템만, 드래그 그립 바로 왼쪽) */}
+      {!isSub && !editing ? (
+        <button
+          type="button"
+          aria-label="하위 일정 추가"
+          className={`${styles.addSubButton} ${isSelected ? styles.addSubButtonActive : ''}`}
+          onClick={handleAddSub}
+        >
+          +
+        </button>
       ) : null}
 
       {/* 그립 */}

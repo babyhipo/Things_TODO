@@ -10,9 +10,11 @@ function snap5(min: number): number {
 }
 
 export function TimetableView() {
-  const activeDay = useTodoStore((s) => s.activeDay);
-  const todos = useTodoStore((s) => s.days[activeDay]);
-  const setTodoTime = useTodoStore((s) => s.setTodoTime);
+  const activeDay          = useTodoStore((s) => s.activeDay);
+  const todos              = useTodoStore((s) => s.days[activeDay]);
+  const setTodoTime        = useTodoStore((s) => s.setTodoTime);
+  const pendingParentId    = useTodoStore((s) => s.pendingParentId);
+  const setPendingParentId = useTodoStore((s) => s.setPendingParentId);
 
   const scheduled = useMemo(
     () => todos.filter((t) => t.time !== null).sort((a, b) => (a.time ?? 0) - (b.time ?? 0)),
@@ -119,19 +121,33 @@ export function TimetableView() {
             </div>
           ))}
 
-          {scheduled.map((todo) => (
-            <div
-              key={todo.id}
-              className={`${styles.card} ${todo.completed ? styles.cardCompleted : ''} ${
-                dragVisual?.id === todo.id ? styles.cardDragging : ''
-              }`}
-              style={{ top: minutesToPx(todo.time!) }}
-            >
-              <span className={styles.cardTime}>{formatTime(todo.time!)}</span>
-              <span className={styles.cardText}>{todo.text || '(내용 없음)'}</span>
-              {todo.parentId && <span className={styles.subBadge}>└</span>}
-            </div>
-          ))}
+          {scheduled.map((todo) => {
+            const isSelected = pendingParentId === todo.id;
+            return (
+              <div
+                key={todo.id}
+                className={`${styles.card} ${todo.completed ? styles.cardCompleted : ''} ${
+                  dragVisual?.id === todo.id ? styles.cardDragging : ''
+                } ${isSelected ? styles.cardSelected : ''}`}
+                style={{ top: minutesToPx(todo.time!) }}
+              >
+                <span className={styles.cardTime}>{formatTime(todo.time!)}</span>
+                <span className={styles.cardText}>{todo.text || '(내용 없음)'}</span>
+                {todo.parentId && <span className={styles.subBadge}>└</span>}
+                {!todo.parentId && !todo.completed && (
+                  <button
+                    type="button"
+                    aria-label="하위 일정 추가"
+                    className={`${styles.addSubButton} ${isSelected ? styles.addSubButtonActive : ''}`}
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => setPendingParentId(isSelected ? null : todo.id)}
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+            );
+          })}
 
           {/* 드래그 프리뷰 */}
           {dragVisual?.previewTime !== null && dragVisual?.previewTime !== undefined && (

@@ -36,6 +36,12 @@
   border-bottom-color: transparent;
 }
 
+/* + 버튼으로 하위 일정 추가 대상으로 선택된 카드 */
+.itemSelected {
+  background-color: rgba(59, 91, 219, 0.06);
+  box-shadow: 0 0 0 1.5px var(--color-accent, #3B5BDB), 0 2px 8px rgba(59, 91, 219, 0.1);
+}
+
 .itemCompleted .textButton,
 .itemCompleted .textInput {
   color: var(--color-text-muted, #8A8A82);
@@ -123,6 +129,42 @@
   border-right: 2px solid #FFFFFF;
   border-bottom: 2px solid #FFFFFF;
   transform: rotate(45deg);
+}
+
+/* 하위 일정 추가 버튼 */
+.addSubButton {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--color-text-muted, #8A8A82);
+  border-radius: var(--radius-sm, 4px);
+  border: 1.5px solid var(--color-line, #E2E5F0);
+  background-color: transparent;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.addSubButtonActive {
+  color: var(--color-accent, #3B5BDB);
+  border-color: var(--color-accent, #3B5BDB);
+  background-color: rgba(59, 91, 219, 0.08);
+}
+
+.addSubButton:not(.addSubButtonActive):hover,
+.addSubButton:not(.addSubButtonActive):focus-visible {
+  color: var(--color-text, #1F1F1F);
+  border-color: var(--color-text-muted, #8A8A82);
+  background-color: var(--color-line, #E2E5F0);
+}
+
+@media (hover: none) {
+  .addSubButton {
+    opacity: 1;
+  }
 }
 
 .warnBadge {
