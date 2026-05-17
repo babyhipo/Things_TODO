@@ -63,6 +63,17 @@ interface UnscheduledDragState {
   anchors: CardAnchor[];
 }
 
+interface SubDragState {
+  todoId: string;
+  text: string;
+  currentX: number;
+  currentY: number;
+  timelineTop: number;
+  timelineBottom: number;
+  timelineLeft: number;
+  anchors: CardAnchor[];
+}
+
 const SNAP = 5;
 
 function calcTimeFromY(
@@ -167,10 +178,13 @@ type Segment =
 interface MixViewProps { day: DayKey; }
 
 export function MixView({ day }: MixViewProps) {
-  const days           = useTodoStore((s) => s.days);
-  const toggleComplete = useTodoStore((s) => s.toggleComplete);
-  const deleteTodo     = useTodoStore((s) => s.deleteTodo);
-  const setTodoTime    = useTodoStore((s) => s.setTodoTime);
+  const days               = useTodoStore((s) => s.days);
+  const toggleComplete     = useTodoStore((s) => s.toggleComplete);
+  const deleteTodo         = useTodoStore((s) => s.deleteTodo);
+  const setTodoTime        = useTodoStore((s) => s.setTodoTime);
+  const setParentId        = useTodoStore((s) => s.setParentId);
+  const pendingParentId    = useTodoStore((s) => s.pendingParentId);
+  const setPendingParentId = useTodoStore((s) => s.setPendingParentId);
   const now = useNowMinutes();
 
   const [expandedGaps, setExpandedGaps] = useState<Set<string>>(new Set());
@@ -180,16 +194,29 @@ export function MixView({ day }: MixViewProps) {
   const unscheduledDragRef = useRef<UnscheduledDragState | null>(null);
   const [swipe, setSwipe] = useState<SwipeState | null>(null);
   const swipeRef = useRef<SwipeState | null>(null);
-  const timelineRef     = useRef<HTMLDivElement>(null);
+  const timelineRef        = useRef<HTMLDivElement>(null);
+  const [subDrag, setSubDrag] = useState<SubDragState | null>(null);
+  const subDragRef         = useRef<SubDragState | null>(null);
+  const [subDragParentTarget, setSubDragParentTarget] = useState<string | null>(null);
+  const subDragParentTargetRef = useRef<string | null>(null);
   useEffect(() => { dragRef.current = drag; });
   useEffect(() => { unscheduledDragRef.current = unscheduledDrag; });
   useEffect(() => { swipeRef.current = swipe; });
+  useEffect(() => { subDragRef.current = subDrag; });
 
-  const { scheduled, unscheduled } = useMemo(() => {
+  const { scheduled, unscheduled, childrenByParent } = useMemo(() => {
     const all = days[day];
+    const childMap = new Map<string, typeof all>();
+    all.filter(t => t.parentId).forEach(c => {
+      const arr = childMap.get(c.parentId!) ?? [];
+      arr.push(c);
+      childMap.set(c.parentId!, arr);
+    });
+    const roots = all.filter(t => !t.parentId);
     return {
-      scheduled:   all.filter(t => t.time !== null).sort((a, b) => toVirt(a.time ?? 0) - toVirt(b.time ?? 0)),
-      unscheduled: all.filter(t => t.time === null).sort((a, b) => a.order - b.order),
+      scheduled:        roots.filter(t => t.time !== null).sort((a, b) => toVirt(a.time ?? 0) - toVirt(b.time ?? 0)),
+      unscheduled:      roots.filter(t => t.time === null).sort((a, b) => a.order - b.order),
+      childrenByParent: childMap,
     };
   }, [days, day]);
 
@@ -291,6 +318,30 @@ export function MixView({ day }: MixViewProps) {
     const ds: SwipeState = { todoId, startX: e.clientX, startY: e.clientY, currentX: e.clientX, direction: 'undecided' };
     setSwipe(ds);
     swipeRef.current = ds;
+  };
+
+  const handleSubDragStart = (e: React.PointerEvent, child: Todo) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const cr = timelineRef.current?.getBoundingClientRect() ?? { top: 0, bottom: 300, left: 0 };
+    const anchors: CardAnchor[] = scheduled.flatMap(t => {
+      const el = document.querySelector<HTMLElement>(`[data-todo-id="${t.id}"]`);
+      if (!el) return [];
+      const r = el.getBoundingClientRect();
+      return [{ todoId: t.id, time: toVirt(t.time!), centerY: r.top + r.height / 2 }];
+    });
+    const ds: SubDragState = {
+      todoId: child.id,
+      text: child.text,
+      currentX: e.clientX,
+      currentY: e.clientY,
+      timelineTop: cr.top,
+      timelineBottom: cr.bottom,
+      timelineLeft: cr.left,
+      anchors,
+    };
+    setSubDrag(ds);
+    subDragRef.current = ds;
   };
 
   const handleUnscheduledDragStart = (e: React.PointerEvent, todo: Todo) => {
@@ -406,6 +457,63 @@ export function MixView({ day }: MixViewProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!unscheduledDrag, day, setTodoTime]);
 
+  /* ── 하위 일정 드래그: 부모 변경 or 시간 지정 ── */
+  useEffect(() => {
+    if (!subDrag) return;
+    const onMove = (e: PointerEvent) => {
+      setSubDrag(prev => {
+        if (!prev) return null;
+        const cr = timelineRef.current?.getBoundingClientRect();
+        return {
+          ...prev,
+          currentX: e.clientX,
+          currentY: e.clientY,
+          ...(cr ? { timelineTop: cr.top, timelineBottom: cr.bottom, timelineLeft: cr.left } : {}),
+        };
+      });
+      // 포인터 아래 루트 카드 감지 (부모 변경 대상)
+      let found: string | null = null;
+      for (const t of scheduled) {
+        const el = document.querySelector<HTMLElement>(`[data-todo-id="${t.id}"]`);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (e.clientY >= rect.top + rect.height * 0.2 && e.clientY <= rect.bottom - rect.height * 0.2) {
+          found = t.id;
+          break;
+        }
+      }
+      subDragParentTargetRef.current = found;
+      setSubDragParentTarget(found);
+    };
+    const onEnd = () => {
+      const ds = subDragRef.current;
+      if (!ds) return;
+      const target = subDragParentTargetRef.current;
+      if (target) {
+        setParentId(day, ds.todoId, target);
+      } else {
+        const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
+        if (overTl) {
+          const t = calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
+          setTodoTime(day, ds.todoId, fromVirt(t));
+        }
+      }
+      setSubDrag(null);
+      subDragRef.current = null;
+      subDragParentTargetRef.current = null;
+      setSubDragParentTarget(null);
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!subDrag, day, setParentId, setTodoTime]);
+
   const insertBeforeId = drag ? getInsertionBeforeId(drag.currentY, drag.anchors) : null;
 
   const isOverTl = unscheduledDrag
@@ -506,7 +614,9 @@ export function MixView({ day }: MixViewProps) {
 
           /* ── 이벤트 카드 ── */
           const { todo }   = seg;
-          const isDragging = drag?.todoId === todo.id;
+          const isDragging       = drag?.todoId === todo.id;
+          const isSelected       = pendingParentId === todo.id;
+          const isSubDropTarget  = subDragParentTarget === todo.id;
 
           const showDropZoneHere =
             showDropZone && !isDragging && !dropZoneRendered && todo.id === effectiveInsertBeforeId;
@@ -545,7 +655,7 @@ export function MixView({ day }: MixViewProps) {
 
               {/* 카드: 시간 레이블 포함 */}
               <div
-                className={`${styles.card} ${isDragging ? styles.cardDragging : ''} ${isDragOutside ? styles.cardDragOutside : ''} ${todo.endTime != null ? styles.cardRange : ''}`}
+                className={`${styles.card} ${isDragging ? styles.cardDragging : ''} ${isDragOutside ? styles.cardDragOutside : ''} ${todo.endTime != null ? styles.cardRange : ''} ${isSelected ? styles.cardSelected : ''} ${isSubDropTarget ? styles.cardSubDropTarget : ''}`}
                 onPointerDown={e => handleSwipeStart(e, todo.id)}
                 style={{
                   transform: `translateX(${swipeOffset}px)`,
@@ -562,7 +672,32 @@ export function MixView({ day }: MixViewProps) {
                   )}
                 </div>
 
-                {/* 체크박스 - 테두리/배경에 시간 기반 색상 적용 */}
+                {/* 하위 일정 추가 버튼 (루트 아이템만, 기존 체크박스 위치) */}
+                {!todo.parentId && (
+                  <button
+                    type="button"
+                    aria-label="하위 일정 추가"
+                    className={`${styles.addSubButton} ${isSelected ? styles.addSubButtonActive : ''}`}
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => setPendingParentId(isSelected ? null : todo.id)}
+                  >
+                    +
+                  </button>
+                )}
+
+                {/* 텍스트 */}
+                <div className={styles.textWrap}>
+                  <span className={`${styles.cardTitle} ${todo.completed ? styles.cardTitleDone : ''}`}>
+                    {todo.text || <span className={styles.noText}>(내용 없음)</span>}
+                  </span>
+                </div>
+
+                {/* ! 배지 (지남 표시) */}
+                {isOverdue && (
+                  <span className={styles.warnBadge} aria-label="시간이 지났습니다">!</span>
+                )}
+
+                {/* 체크박스 (그립 왼쪽, 기존 +버튼 위치) */}
                 <button
                   type="button"
                   role="checkbox"
@@ -581,18 +716,6 @@ export function MixView({ day }: MixViewProps) {
                   />
                 </button>
 
-                {/* 텍스트 */}
-                <div className={styles.textWrap}>
-                  <span className={`${styles.cardTitle} ${todo.completed ? styles.cardTitleDone : ''}`}>
-                    {todo.text || <span className={styles.noText}>(내용 없음)</span>}
-                  </span>
-                </div>
-
-                {/* ! 배지 (지남 표시) */}
-                {isOverdue && (
-                  <span className={styles.warnBadge} aria-label="시간이 지났습니다">!</span>
-                )}
-
                 {/* 그립 핸들 (오른쪽, 2선 스타일) */}
                 <button
                   type="button"
@@ -607,6 +730,15 @@ export function MixView({ day }: MixViewProps) {
             </div>
           );
 
+          const children = (childrenByParent.get(todo.id) ?? [])
+            .slice().sort((a, b) => {
+              if (a.time == null && b.time == null) return a.order - b.order;
+              if (a.time == null) return 1;
+              if (b.time == null) return -1;
+              if (a.time !== b.time) return a.time - b.time;
+              return a.order - b.order;
+            });
+
           return (
             <div key={todo.id}>
               {showDropZoneHere && (
@@ -615,6 +747,42 @@ export function MixView({ day }: MixViewProps) {
               {isDragging
                 ? <div style={{ height: 0, overflow: 'visible' }}>{card}</div>
                 : card}
+              {!isDragging && children.map(child => (
+                <div
+                  key={child.id}
+                  className={`${styles.subItem} ${child.completed ? styles.subItemDone : ''} ${subDrag?.todoId === child.id ? styles.subItemDragging : ''}`}
+                >
+                  <span className={styles.subItemArrow} aria-hidden="true">└</span>
+                  {/* 시간 (기존 체크박스 위치) */}
+                  <span className={styles.subItemTime}>
+                    {child.time != null ? formatTime(child.time) : ''}
+                  </span>
+                  <span className={`${styles.subItemText} ${child.completed ? styles.subItemTextDone : ''}`}>
+                    {child.text || '(내용 없음)'}
+                  </span>
+                  {/* 네모 체크박스 (그립 왼쪽) */}
+                  <button
+                    type="button"
+                    className={`${styles.subItemCheckbox} ${child.completed ? styles.subItemCheckboxChecked : ''}`}
+                    onClick={() => toggleComplete(day, child.id)}
+                    aria-label={child.completed ? '완료 취소' : '완료 처리'}
+                    role="checkbox"
+                    aria-checked={child.completed}
+                  >
+                    <span className={styles.subItemCheckboxInner} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.subItemHandle}
+                    onPointerDown={!child.completed ? (e => { e.stopPropagation(); handleSubDragStart(e, child); }) : undefined}
+                    aria-label="드래그로 이동"
+                    disabled={child.completed}
+                    style={{ touchAction: 'none' }}
+                  >
+                    <span className={styles.handleIcon} aria-hidden="true" />
+                  </button>
+                </div>
+              ))}
             </div>
           );
         })}
@@ -646,6 +814,23 @@ export function MixView({ day }: MixViewProps) {
           style={{ top: unscheduledDrag.currentY, left: unscheduledDrag.timelineLeft + 64 }}
         >
           {unscheduledDrag.text || '(내용 없음)'}
+        </div>
+      )}
+
+      {/* 하위 일정 드래그: 시간 지정 모드일 때 플로팅 인디케이터 */}
+      {subDrag && !subDragParentTarget && subDrag.currentY >= subDrag.timelineTop && subDrag.currentY <= subDrag.timelineBottom && (
+        <div className={styles.floatingIndicator}
+          style={{ top: subDrag.currentY, left: subDrag.timelineLeft }}>
+          <div className={styles.floatingPill}>
+            {formatTime(fromVirt(calcTimeFromY(subDrag.currentY, subDrag.anchors, subDrag.timelineTop, subDrag.timelineBottom)))}
+          </div>
+          <div className={styles.floatingLine} />
+        </div>
+      )}
+      {subDrag && (
+        <div className={styles.ghostCard}
+          style={{ top: subDrag.currentY, left: subDrag.timelineLeft + 64 }}>
+          {subDrag.text || '(내용 없음)'}
         </div>
       )}
 

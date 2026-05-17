@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   DndContext,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
@@ -24,7 +26,6 @@ function getCurrentMinutes(): number {
   return d.getHours() * 60 + d.getMinutes();
 }
 
-// Phase 2-C의 useNowTick 훅과 파일 충돌을 피하기 위해 로컬 구현 사용
 function useNowTickLocal(): number {
   const [now, setNow] = useState(() => getCurrentMinutes());
   useEffect(() => {
@@ -32,6 +33,19 @@ function useNowTickLocal(): number {
     return () => clearInterval(timer);
   }, []);
   return now;
+}
+
+// 아이템 아래 간격: 부모→자식, 자식 형제끼리는 좁게
+function getGapAfter(
+  todos: ReturnType<typeof useTodoStore.getState>['days'][string],
+  index: number,
+): number {
+  const current = todos[index];
+  const next = todos[index + 1];
+  if (!next) return 0;
+  if (!current.parentId && next.parentId === current.id) return 2;
+  if (current.parentId && next.parentId === current.parentId) return 2;
+  return 6;
 }
 
 export function TodoList() {
@@ -71,21 +85,34 @@ export function TodoList() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const ids = useMemo(() => todos.map((t) => t.id), [todos]);
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = ids.indexOf(String(active.id));
-    const newIndex = ids.indexOf(String(over.id));
-    if (oldIndex === -1 || newIndex === -1) return;
-    const newIds = arrayMove(ids, oldIndex, newIndex);
-    reorderTodos(activeDay, newIds, String(active.id));
+    if (over && String(active.id) !== String(over.id)) {
+      const oldIndex = ids.indexOf(String(active.id));
+      const newIndex = ids.indexOf(String(over.id));
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newIds = arrayMove(ids, oldIndex, newIndex);
+        reorderTodos(activeDay, newIds, String(active.id));
+      }
+    }
+    setActiveId(null);
   };
+
+  const handleDragCancel = () => setActiveId(null);
+
+  const activeTodo = activeId ? todos.find((t) => t.id === activeId) : null;
 
   if (todos.length === 0) {
     return (
@@ -104,7 +131,9 @@ export function TodoList() {
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         <ul
@@ -113,11 +142,25 @@ export function TodoList() {
           role="tabpanel"
           aria-labelledby={`daytab-${activeDay}`}
         >
-          {todos.map((todo) => (
-            <TodoItem key={todo.id} todo={todo} day={activeDay} now={now} />
+          {todos.map((todo, index) => (
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              day={activeDay}
+              now={now}
+              gapAfter={getGapAfter(todos, index)}
+            />
           ))}
         </ul>
       </SortableContext>
+
+      <DragOverlay>
+        {activeTodo ? (
+          <div className={styles.dragGhost}>
+            <span className={styles.dragGhostText}>{activeTodo.text || '(내용 없음)'}</span>
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

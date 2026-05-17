@@ -1,9 +1,13 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
 .form {
   display: flex;
   align-items: center;
   gap: var(--space-2, 8px);
   padding: 6px var(--space-4, 16px);
-  background-color: var(--color-bg-card, #FFFFFF);
 }
 
 .templateButton {
@@ -39,26 +43,104 @@
   border-color: var(--color-accent, #3B5BDB);
 }
 
-.addButton {
+/* 하위 일정 모드일 때 입력창 스타일 */
+.inputSub {
+  border-color: var(--color-accent, #3B5BDB);
+  background-color: rgba(59, 91, 219, 0.03);
+}
+
+/* 하위 일정 대상 표시 칩 */
+.parentChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 16px 4px;
+  background-color: rgba(59, 91, 219, 0.06);
+  border-bottom: 1px solid rgba(59, 91, 219, 0.12);
+}
+
+.parentChipArrow {
+  font-size: 13px;
+  color: var(--color-accent, #3B5BDB);
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+}
+
+.parentChipText {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent, #3B5BDB);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.parentChipLabel {
+  font-size: 11px;
+  color: var(--color-accent, #3B5BDB);
+  opacity: 0.7;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.parentChipCancel {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  color: var(--color-text, #1F1F1F);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-line, #E2E5F0);
-  transition: opacity 120ms ease, background-color 120ms ease;
+  font-size: 16px;
+  color: var(--color-accent, #3B5BDB);
+  border-radius: 50%;
+  opacity: 0.6;
+  transition: opacity 100ms ease, background-color 100ms ease;
+  margin-left: 2px;
 }
 
-.addButton:disabled {
+.parentChipCancel:hover,
+.parentChipCancel:focus-visible {
+  opacity: 1;
+  background-color: rgba(59, 91, 219, 0.12);
+}
+
+.amButton,
+.pmButton {
+  flex: 0 0 auto;
+  height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border-radius: var(--radius-md, 8px);
+  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.amButton {
+  color: var(--color-text, #1F1F1F);
+  background-color: var(--color-line, #E2E5F0);
+}
+
+.pmButton {
+  color: #FFFFFF;
+  background-color: var(--color-accent, #3B5BDB);
+}
+
+.amButton:disabled,
+.pmButton:disabled {
   opacity: 0.4;
 }
 
-.addButton:not(:disabled):hover,
-.addButton:not(:disabled):focus-visible {
-  background-color: var(--color-accent, #3B5BDB);
-  color: #FFFFFF;
+.amButton:not(:disabled):hover,
+.amButton:not(:disabled):focus-visible {
+  background-color: #d0d4e8;
+}
+
+.pmButton:not(:disabled):hover,
+.pmButton:not(:disabled):focus-visible {
+  opacity: 0.85;
 }

@@ -1,7 +1,7 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
   list-style: none;
   margin: 0;
   padding: 8px 16px;
@@ -16,7 +16,26 @@
 }
 
 .emptyText {
+  margin: 0;
   color: var(--color-text-muted, #8A8A82);
   font-size: var(--font-size-md, 16px);
   text-align: center;
+}
+
+.dragGhost {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  background-color: var(--color-bg-card, #FFFFFF);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border: 1.5px solid var(--color-accent, #3B5BDB);
+  opacity: 0.92;
+  cursor: grabbing;
+}
+
+.dragGhostText {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1F1F1F);
 }

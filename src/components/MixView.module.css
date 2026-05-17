@@ -250,6 +250,164 @@
   line-height: 1;
 }
 
+/* ── 하위 일정 행 ── */
+.subItem {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 12px 3px 8px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  margin-left: 40px;
+  background-color: #FFFFFF;
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  min-height: 30px;
+}
+
+.subItemDone {
+  opacity: 0.55;
+}
+
+.subItemDragging {
+  opacity: 0.3;
+}
+
+.subItemArrow {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--color-text-muted, #8A8A82);
+  line-height: 1;
+}
+
+.subItemText {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text, #1F1F1F);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subItemTextDone {
+  text-decoration: line-through;
+  color: var(--color-text-muted, #8A8A82);
+}
+
+.subItemTime {
+  flex: 0 0 auto;
+  width: 36px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted, #8A8A82);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* 네모 체크박스 */
+.subItemCheckbox {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.subItemCheckboxInner {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--color-text-muted, #8A8A82);
+  border-radius: 3px;
+  background-color: transparent;
+  position: relative;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.subItemCheckboxChecked .subItemCheckboxInner {
+  background-color: #9CA3AF;
+  border-color: #9CA3AF;
+}
+
+.subItemCheckboxChecked .subItemCheckboxInner::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0px;
+  width: 5px;
+  height: 8px;
+  border-right: 2px solid #FFFFFF;
+  border-bottom: 2px solid #FFFFFF;
+  transform: rotate(45deg);
+}
+
+.subItemHandle {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-line, #E2E5F0);
+  cursor: grab;
+  touch-action: none;
+}
+
+.subItemHandle:active {
+  cursor: grabbing;
+}
+
+.subItemHandle:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* ── 카드 선택(하위 일정 추가 모드) ── */
+.cardSelected {
+  background-color: rgba(59, 91, 219, 0.06);
+  box-shadow: 0 0 0 1.5px var(--color-accent, #3B5BDB), 0 2px 8px rgba(59, 91, 219, 0.1);
+}
+
+/* ── 하위 일정 드래그로 부모 변경 대상 카드 강조 ── */
+.cardSubDropTarget {
+  background-color: rgba(16, 185, 129, 0.08);
+  box-shadow: 0 0 0 2px #10B981, 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+/* ── 하위 일정 추가 버튼 ── */
+.addSubButton {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--color-text-muted, #8A8A82);
+  border-radius: var(--radius-sm, 4px);
+  border: 1.5px solid var(--color-line, #E2E5F0);
+  background-color: transparent;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.addSubButtonActive {
+  color: var(--color-accent, #3B5BDB);
+  border-color: var(--color-accent, #3B5BDB);
+  background-color: rgba(59, 91, 219, 0.08);
+}
+
+.addSubButton:not(.addSubButtonActive):hover {
+  color: var(--color-text, #1F1F1F);
+  border-color: var(--color-text-muted, #8A8A82);
+  background-color: var(--color-line, #E2E5F0);
+}
+
 /* ── 그립 핸들 (오른쪽, 2선 스타일) ── */
 .dragHandle {
   flex: 0 0 auto;
@@ -471,12 +629,14 @@
 }
 
 .emptyText {
+  margin: 0 0 4px;
   font-size: var(--font-size-md);
   color: var(--color-text-muted);
   font-weight: 500;
 }
 
 .emptyHint {
+  margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   opacity: 0.7;
@@ -491,10 +651,10 @@
 }
 
 .unscheduledTitle {
+  margin: 0 0 10px;
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-muted);
-  margin-bottom: 10px;
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
