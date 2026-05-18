@@ -43,7 +43,7 @@ function useNowTickLocal(): number {
 
 // 아이템 아래 간격: 부모→자식, 자식 형제끼리는 좁게
 function getGapAfter(
-  todos: ReturnType<typeof useTodoStore.getState>['days'][string],
+  todos: import('../types/todo').Todo[],
   index: number,
 ): number {
   const current = todos[index];
