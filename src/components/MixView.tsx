@@ -160,7 +160,6 @@ function eventColor(time: number | null, overdue: boolean, completed: boolean, n
   const offset = day === 'tomorrow' ? 1440 : 0;
   const diff = toVirt(time) + offset - now;
   if (diff <= 60)  return '#F59E0B';
-  if (diff <= 180) return '#10B981';
   return '#3B5BDB';
 }
 
@@ -181,11 +180,47 @@ export function MixView({ day }: MixViewProps) {
   const days               = useTodoStore((s) => s.days);
   const toggleComplete     = useTodoStore((s) => s.toggleComplete);
   const deleteTodo         = useTodoStore((s) => s.deleteTodo);
+  const updateTodoText     = useTodoStore((s) => s.updateTodoText);
   const setTodoTime        = useTodoStore((s) => s.setTodoTime);
   const setParentId        = useTodoStore((s) => s.setParentId);
   const pendingParentId    = useTodoStore((s) => s.pendingParentId);
   const setPendingParentId = useTodoStore((s) => s.setPendingParentId);
   const now = useNowMinutes();
+
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [editDraft, setEditDraft]   = useState('');
+  const editInputRef  = useRef<HTMLInputElement | null>(null);
+  const cancelEditRef = useRef(false);
+
+  const beginEdit = (todo: Todo) => {
+    const timeStr = todo.time !== null
+      ? (todo.endTime != null
+          ? `${formatTime(todo.time)}-${formatTime(todo.endTime)} `
+          : `${formatTime(todo.time)} `)
+      : '';
+    setEditDraft(timeStr + todo.text);
+    cancelEditRef.current = false;
+    setEditingId(todo.id);
+  };
+  const commitEdit = (id: string) => {
+    if (cancelEditRef.current) return;
+    const v = editDraft.trim();
+    if (!v) deleteTodo(day, id);
+    else updateTodoText(day, id, v);
+    setEditingId(null);
+  };
+  const cancelEdit = () => {
+    cancelEditRef.current = true;
+    setEditingId(null);
+  };
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      const el = editInputRef.current;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }
+  }, [editingId]);
 
   const [expandedGaps, setExpandedGaps] = useState<Set<string>>(new Set());
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -664,7 +699,10 @@ export function MixView({ day }: MixViewProps) {
               >
                 {/* 시간 레이블 (카드 내 좌측) */}
                 <div className={styles.timeWrap}>
-                  <span className={`${styles.timeLabel} ${isOverdue ? styles.timeLabelOverdue : ''} ${isDragging ? styles.timeLabelDragging : ''}`}>
+                  <span
+                    className={`${styles.timeLabel} ${isDragging ? styles.timeLabelDragging : ''}`}
+                    style={{ color: isDragging ? undefined : color }}
+                  >
                     {formatTime(displayTime)}
                   </span>
                   {todo.endTime != null && !isDragging && (
@@ -672,32 +710,7 @@ export function MixView({ day }: MixViewProps) {
                   )}
                 </div>
 
-                {/* 하위 일정 추가 버튼 (루트 아이템만, 기존 체크박스 위치) */}
-                {!todo.parentId && (
-                  <button
-                    type="button"
-                    aria-label="하위 일정 추가"
-                    className={`${styles.addSubButton} ${isSelected ? styles.addSubButtonActive : ''}`}
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={() => setPendingParentId(isSelected ? null : todo.id)}
-                  >
-                    +
-                  </button>
-                )}
-
-                {/* 텍스트 */}
-                <div className={styles.textWrap}>
-                  <span className={`${styles.cardTitle} ${todo.completed ? styles.cardTitleDone : ''}`}>
-                    {todo.text || <span className={styles.noText}>(내용 없음)</span>}
-                  </span>
-                </div>
-
-                {/* ! 배지 (지남 표시) */}
-                {isOverdue && (
-                  <span className={styles.warnBadge} aria-label="시간이 지났습니다">!</span>
-                )}
-
-                {/* 체크박스 (그립 왼쪽, 기존 +버튼 위치) */}
+                {/* 체크박스 */}
                 <button
                   type="button"
                   role="checkbox"
@@ -715,6 +728,51 @@ export function MixView({ day }: MixViewProps) {
                     aria-hidden="true"
                   />
                 </button>
+
+                {/* 텍스트 */}
+                <div className={styles.textWrap} onPointerDown={e => e.stopPropagation()}>
+                  {editingId === todo.id ? (
+                    <input
+                      ref={editInputRef}
+                      type="text"
+                      className={styles.editInput}
+                      value={editDraft}
+                      onChange={e => setEditDraft(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') { e.preventDefault(); commitEdit(todo.id); }
+                        if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                      }}
+                      onBlur={() => commitEdit(todo.id)}
+                      autoComplete="off"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className={`${styles.cardTitle} ${todo.completed ? styles.cardTitleDone : ''}`}
+                      onClick={() => { if (!todo.completed) beginEdit(todo); }}
+                    >
+                      {todo.text || <span className={styles.noText}>(내용 없음)</span>}
+                    </button>
+                  )}
+                </div>
+
+                {/* ! 배지 (지남 표시) */}
+                {!editingId && isOverdue && (
+                  <span className={styles.warnBadge} aria-label="시간이 지났습니다">!</span>
+                )}
+
+                {/* 하위 일정 추가 버튼 (루트 아이템만) */}
+                {!todo.parentId && (
+                  <button
+                    type="button"
+                    aria-label="하위 일정 추가"
+                    className={`${styles.addSubButton} ${isSelected ? styles.addSubButtonActive : ''}`}
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => setPendingParentId(isSelected ? null : todo.id)}
+                  >
+                    +
+                  </button>
+                )}
 
                 {/* 그립 핸들 (오른쪽, 2선 스타일) */}
                 <button
@@ -753,14 +811,10 @@ export function MixView({ day }: MixViewProps) {
                   className={`${styles.subItem} ${child.completed ? styles.subItemDone : ''} ${subDrag?.todoId === child.id ? styles.subItemDragging : ''}`}
                 >
                   <span className={styles.subItemArrow} aria-hidden="true">└</span>
-                  {/* 시간 (기존 체크박스 위치) */}
                   <span className={styles.subItemTime}>
                     {child.time != null ? formatTime(child.time) : ''}
                   </span>
-                  <span className={`${styles.subItemText} ${child.completed ? styles.subItemTextDone : ''}`}>
-                    {child.text || '(내용 없음)'}
-                  </span>
-                  {/* 네모 체크박스 (그립 왼쪽) */}
+                  {/* 체크박스 (시간 바로 우측) */}
                   <button
                     type="button"
                     className={`${styles.subItemCheckbox} ${child.completed ? styles.subItemCheckboxChecked : ''}`}
@@ -771,6 +825,9 @@ export function MixView({ day }: MixViewProps) {
                   >
                     <span className={styles.subItemCheckboxInner} aria-hidden="true" />
                   </button>
+                  <span className={`${styles.subItemText} ${child.completed ? styles.subItemTextDone : ''}`}>
+                    {child.text || '(내용 없음)'}
+                  </span>
                   <button
                     type="button"
                     className={styles.subItemHandle}
