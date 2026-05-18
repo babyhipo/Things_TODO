@@ -19,7 +19,7 @@ function App() {
   const activeStoreDay = useTodoStore((s) => s.activeDay);
   const setStoreDay = useTodoStore((s) => s.setActiveDay);
 
-  const [contentView, setContentView] = useState<ContentView>('list');
+  const [contentView, setContentView] = useState<ContentView>('mix');
   const [templateOpen, setTemplateOpen] = useState(false);
 
   const activeTab: FolderTabValue =

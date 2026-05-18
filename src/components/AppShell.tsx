@@ -1,5 +1,30 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import styles from './AppShell.module.css';
+
+function useKeyboardInset(): number {
+  const [inset, setInset] = useState(0);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      const gap = window.innerHeight - vv.height - vv.offsetTop;
+      setInset(Math.max(0, gap));
+    };
+
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    update();
+
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
+
+  return inset;
+}
 
 interface AppShellProps {
   header?: ReactNode;
@@ -10,6 +35,15 @@ interface AppShellProps {
 }
 
 export function AppShell({ header, children, footer, bottomNav, contentInset = 0 }: AppShellProps) {
+  const keyboardInset = useKeyboardInset();
+  const keyboardOpen = keyboardInset > 0;
+
+  const footerBottom = keyboardOpen
+    ? `${keyboardInset}px`
+    : bottomNav
+      ? 'calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom))'
+      : 'env(safe-area-inset-bottom)';
+
   return (
     <div className={styles.outer}>
       <div className={styles.app}>
@@ -32,11 +66,7 @@ export function AppShell({ header, children, footer, bottomNav, contentInset = 0
         {footer ? (
           <div
             className={styles.footer}
-            style={{
-              bottom: bottomNav
-                ? 'calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom))'
-                : 'env(safe-area-inset-bottom)',
-            }}
+            style={{ bottom: footerBottom, transition: 'bottom 80ms ease-out' }}
           >
             {footer}
           </div>

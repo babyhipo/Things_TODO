@@ -77,11 +77,28 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
 
   const isSub = todo.parentId !== null;
   const isSelected = pendingParentId === todo.id;
+
+  const DAY_START_MIN = 4 * 60;
+  const toVirt = (t: number) => (t < DAY_START_MIN ? t + 1440 : t);
+
+  const virtNow  = toVirt(now);
+  const virtTime = todo.time !== null ? toVirt(todo.time) : null;
+
   const isOverdue =
     !todo.completed &&
-    todo.time !== null &&
+    virtTime !== null &&
     day === 'today' &&
-    todo.time < now;
+    virtTime < virtNow;
+
+  const timeColor = (() => {
+    if (todo.completed) return '#9CA3AF';
+    if (virtTime === null) return undefined;
+    if (isOverdue) return '#EF4444';
+    const offset = day === 'tomorrow' ? 1440 : 0;
+    const diff = virtTime + offset - virtNow;
+    if (diff <= 60) return '#F59E0B';
+    return '#3B5BDB';
+  })();
 
   const beginEdit = () => {
     if (editing) return;
@@ -173,9 +190,9 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
       {/* 시간 */}
       {todo.time !== null ? (
         <div className={styles.timeWrap} aria-label={`시간 ${formatTime(todo.time)}`}>
-          <span className={styles.time}>{formatTime(todo.time)}</span>
+          <span className={styles.time} style={{ color: timeColor }}>{formatTime(todo.time)}</span>
           {todo.endTime != null && (
-            <span className={styles.timeEnd}>-{formatTime(todo.endTime)}</span>
+            <span className={styles.timeEnd}>{`-${formatTime(todo.endTime)}`}</span>
           )}
         </div>
       ) : (
@@ -191,7 +208,11 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
         className={`${styles.checkbox} ${todo.completed ? styles.checkboxChecked : ''}`}
         onClick={() => toggleComplete(day, todo.id)}
       >
-        <span className={styles.checkboxInner} aria-hidden="true" />
+        <span
+          className={styles.checkboxInner}
+          style={{ borderColor: timeColor, backgroundColor: todo.completed ? timeColor : undefined }}
+          aria-hidden="true"
+        />
       </button>
 
       {/* 일정 내용 */}

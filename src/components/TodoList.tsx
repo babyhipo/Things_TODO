@@ -21,6 +21,12 @@ import styles from './TodoList.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import { TodoItem } from './TodoItem';
 
+const DAY_START_MIN = 4 * 60; // 타임라인과 동일: 새벽 4시 기준
+
+function toVirt(t: number): number {
+  return t < DAY_START_MIN ? t + 1440 : t;
+}
+
 function getCurrentMinutes(): number {
   const d = new Date();
   return d.getHours() * 60 + d.getMinutes();
@@ -61,7 +67,7 @@ export function TodoList() {
       if (a.time == null && b.time == null) return a.order - b.order;
       if (a.time == null) return 1;
       if (b.time == null) return -1;
-      if (a.time !== b.time) return a.time - b.time;
+      if (a.time !== b.time) return toVirt(a.time) - toVirt(b.time);
       return a.order - b.order;
     };
     const roots = all.filter((t) => !t.parentId);
