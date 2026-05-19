@@ -55,7 +55,6 @@ export function ListToolbar({ day }: ListToolbarProps) {
       >
         <UndoIcon />
       </button>
-      <div className={styles.spacer} />
       <button
         type="button"
         className={styles.dedupBtn}
