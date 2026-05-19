@@ -42,33 +42,32 @@ export function fireConfetti() {
     });
   }, 400);
 
-  // 0.75초 후 중앙 하단 — 핑크 원형 + 블루·퍼플 사각 동시에
+  // 0.75초 후 중앙 하단 — 핑크 원형 + 블루·퍼플 사각 동시에 (넓게)
   setTimeout(() => {
     confetti({
       particleCount: 40,
-      spread: 55,
-      startVelocity: 18,
-      origin: { x: 0.5, y: 0.65 },
+      spread: 140,
+      startVelocity: 28,
+      origin: { x: 0.5, y: 0.78 },
       shapes: ['circle'],
       colors: ['#FF69B4', '#FF1493', '#FF6347', '#FF4500', '#FFB6C1'],
       scalar: 1.0,
       ticks: 140,
-      gravity: 1.1,
-      drift: 0.1,
+      gravity: 0.8,
       zIndex: 9999,
     });
 
-    [-0.12, 0.12].forEach((drift) => {
+    [-0.2, 0.2].forEach((drift) => {
       confetti({
         particleCount: 18,
-        spread: 40,
-        startVelocity: 26,
-        origin: { x: 0.5, y: 0.6 },
+        spread: 120,
+        startVelocity: 32,
+        origin: { x: 0.5, y: 0.78 },
         shapes: ['square'],
         colors: ['#3B5BDB', '#7C3AED', '#10B981', '#F59E0B'],
         scalar: 1.1,
-        ticks: 110,
-        gravity: 0.9,
+        ticks: 120,
+        gravity: 0.75,
         drift,
         zIndex: 9999,
       });
