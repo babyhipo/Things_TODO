@@ -211,6 +211,7 @@ export function TimelineView({ day }: TimelineViewProps) {
   const days               = useTodoStore((s) => s.days);
   const toggleComplete     = useTodoStore((s) => s.toggleComplete);
   const deleteTodo         = useTodoStore((s) => s.deleteTodo);
+  const moveTodoToTomorrow = useTodoStore((s) => s.moveTodoToTomorrow);
   const updateTodoText     = useTodoStore((s) => s.updateTodoText);
   const setTodoTime        = useTodoStore((s) => s.setTodoTime);
   const setParentId        = useTodoStore((s) => s.setParentId);
@@ -480,9 +481,15 @@ export function TimelineView({ day }: TimelineViewProps) {
     };
     const onEnd = () => {
       const s = swipeRef.current;
-      if (s && s.direction === 'h' && s.startX - s.currentX >= 72) {
-        hapticDelete();
-        deleteTodo(day, s.todoId);
+      if (s && s.direction === 'h') {
+        const dx = s.currentX - s.startX;
+        if (dx <= -72) {
+          hapticDelete();
+          deleteTodo(day, s.todoId);
+        } else if (dx >= 72 && day === 'today') {
+          hapticDrop();
+          moveTodoToTomorrow(day, s.todoId);
+        }
       }
       setSwipe(null);
     };
@@ -495,7 +502,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       window.removeEventListener('pointercancel', onEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!swipe, day, deleteTodo]);
+  }, [!!swipe, day, deleteTodo, moveTodoToTomorrow]);
 
   /* ── 드래그 이동·종료 ── */
   useEffect(() => {
@@ -788,9 +795,11 @@ export function TimelineView({ day }: TimelineViewProps) {
               ? drag.currentY - drag.initialCardCenterY
               : 0;
 
-            const isSwipingThis = swipe?.todoId === todo.id && swipe.direction !== 'v';
-            const swipeOffset   = isSwipingThis ? Math.min(0, swipe!.currentX - swipe!.startX) : 0;
+            const isSwipingThis  = swipe?.todoId === todo.id && swipe.direction !== 'v';
+            const rawOffset      = isSwipingThis ? swipe!.currentX - swipe!.startX : 0;
+            const swipeOffset    = Math.max(-80, Math.min(80, rawOffset));
             const deleteProgress = Math.min(1, -swipeOffset / 72);
+            const moveProgress   = Math.min(1, swipeOffset / 72);
 
             const isDragOutside = isDragging && drag
               ? drag.currentY < drag.containerTop || drag.currentY > drag.containerBottom
@@ -834,6 +843,10 @@ export function TimelineView({ day }: TimelineViewProps) {
                 {/* 스와이프 삭제 힌트 */}
                 {isSwipingThis && swipeOffset < -12 && (
                   <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgress }}>×</div>
+                )}
+                {/* 스와이프 내일 이동 힌트 — 오늘 탭만 */}
+                {isSwipingThis && swipeOffset > 12 && day === 'today' && (
+                  <div className={styles.swipeMoveHint} style={{ opacity: moveProgress }}>→</div>
                 )}
 
                 {/* 카드 */}
@@ -1014,13 +1027,18 @@ export function TimelineView({ day }: TimelineViewProps) {
           <h3 className={styles.unscheduledTitle}>시간 미지정</h3>
           <div className={styles.unscheduledList}>
             {unscheduled.map(todo => {
-              const isSwipingU     = swipe?.todoId === todo.id && swipe.direction !== 'v';
-              const swipeOffsetU   = isSwipingU ? Math.min(0, swipe!.currentX - swipe!.startX) : 0;
+              const isSwipingU      = swipe?.todoId === todo.id && swipe.direction !== 'v';
+              const rawOffsetU      = isSwipingU ? swipe!.currentX - swipe!.startX : 0;
+              const swipeOffsetU    = Math.max(-80, Math.min(80, rawOffsetU));
               const deleteProgressU = Math.min(1, -swipeOffsetU / 72);
+              const moveProgressU   = Math.min(1, swipeOffsetU / 72);
               return (
                 <div key={todo.id} style={{ position: 'relative' }}>
                   {isSwipingU && swipeOffsetU < -12 && (
                     <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressU }}>×</div>
+                  )}
+                  {isSwipingU && swipeOffsetU > 12 && day === 'today' && (
+                    <div className={styles.swipeMoveHint} style={{ opacity: moveProgressU }}>→</div>
                   )}
                   <div
                     className={`${styles.unscheduledItem} ${todo.completed ? styles.unscheduledItemDone : ''} ${unscheduledDrag?.todoId === todo.id ? styles.unscheduledItemDragging : ''}`}

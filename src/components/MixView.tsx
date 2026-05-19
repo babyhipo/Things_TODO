@@ -184,6 +184,7 @@ export function MixView({ day }: MixViewProps) {
   const days               = useTodoStore((s) => s.days);
   const toggleComplete     = useTodoStore((s) => s.toggleComplete);
   const deleteTodo         = useTodoStore((s) => s.deleteTodo);
+  const moveTodoToTomorrow = useTodoStore((s) => s.moveTodoToTomorrow);
   const updateTodoText     = useTodoStore((s) => s.updateTodoText);
   const setTodoTime        = useTodoStore((s) => s.setTodoTime);
   const setParentId        = useTodoStore((s) => s.setParentId);
@@ -447,9 +448,15 @@ export function MixView({ day }: MixViewProps) {
     };
     const onEnd = () => {
       const s = swipeRef.current;
-      if (s && s.direction === 'h' && s.startX - s.currentX >= 72) {
-        hapticDelete();
-        deleteTodo(day, s.todoId);
+      if (s && s.direction === 'h') {
+        const dx = s.currentX - s.startX;
+        if (dx <= -72) {
+          hapticDelete();
+          deleteTodo(day, s.todoId);
+        } else if (dx >= 72 && day === 'today') {
+          hapticDrop();
+          moveTodoToTomorrow(day, s.todoId);
+        }
       }
       setSwipe(null);
     };
@@ -462,7 +469,7 @@ export function MixView({ day }: MixViewProps) {
       window.removeEventListener('pointercancel', onEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!swipe, day, deleteTodo]);
+  }, [!!swipe, day, deleteTodo, moveTodoToTomorrow]);
 
   useEffect(() => {
     if (!drag) return;
@@ -754,9 +761,11 @@ export function MixView({ day }: MixViewProps) {
             ? drag.currentY < drag.containerTop || drag.currentY > drag.containerBottom
             : false;
 
-          const isSwipingThis = swipe?.todoId === todo.id && swipe.direction !== 'v';
-          const swipeOffset   = isSwipingThis ? Math.min(0, swipe!.currentX - swipe!.startX) : 0;
+          const isSwipingThis  = swipe?.todoId === todo.id && swipe.direction !== 'v';
+          const rawOffset      = isSwipingThis ? swipe!.currentX - swipe!.startX : 0;
+          const swipeOffset    = Math.max(-80, Math.min(80, rawOffset));
           const deleteProgress = Math.min(1, -swipeOffset / 72);
+          const moveProgress   = Math.min(1, swipeOffset / 72);
 
           const card = (
             <div
@@ -768,9 +777,13 @@ export function MixView({ day }: MixViewProps) {
                 ? { transform: `translateY(${translateY}px)`, zIndex: 50 }
                 : undefined}
             >
-              {/* 스와이프 삭제 힌트 */}
+              {/* 스와이프 삭제 힌트 (왼쪽) */}
               {isSwipingThis && swipeOffset < -12 && (
                 <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgress }}>×</div>
+              )}
+              {/* 스와이프 내일 이동 힌트 (오른쪽) — 오늘 탭만 */}
+              {isSwipingThis && swipeOffset > 12 && day === 'today' && (
+                <div className={styles.swipeMoveHint} style={{ opacity: moveProgress }}>→</div>
               )}
 
               {/* 카드: 시간 레이블 포함 */}
@@ -977,12 +990,17 @@ export function MixView({ day }: MixViewProps) {
           <div className={styles.unscheduledList}>
             {unscheduled.map(todo => {
               const isSwipingU      = swipe?.todoId === todo.id && swipe.direction !== 'v';
-              const swipeOffsetU    = isSwipingU ? Math.min(0, swipe!.currentX - swipe!.startX) : 0;
+              const rawOffsetU      = isSwipingU ? swipe!.currentX - swipe!.startX : 0;
+              const swipeOffsetU    = Math.max(-80, Math.min(80, rawOffsetU));
               const deleteProgressU = Math.min(1, -swipeOffsetU / 72);
+              const moveProgressU   = Math.min(1, swipeOffsetU / 72);
               return (
                 <div key={todo.id} style={{ position: 'relative' }}>
                   {isSwipingU && swipeOffsetU < -12 && (
                     <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressU }}>×</div>
+                  )}
+                  {isSwipingU && swipeOffsetU > 12 && day === 'today' && (
+                    <div className={styles.swipeMoveHint} style={{ opacity: moveProgressU }}>→</div>
                   )}
                   <div
                     className={`${styles.unscheduledItem} ${todo.completed ? styles.unscheduledItemDone : ''} ${unscheduledDrag?.todoId === todo.id ? styles.unscheduledItemDragging : ''}`}

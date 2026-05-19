@@ -521,6 +521,26 @@
   line-height: 1;
 }
 
+.swipeMoveHint {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #7C3AED;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+  line-height: 1;
+}
+
 /* ── 플로팅 시간 인디케이터 (드래그 중) ── */
 .floatingIndicator {
   position: fixed;

@@ -22,6 +22,7 @@ interface TodoState {
   updateTodoText: (day: DayKey, id: string, rawText: string) => void;
   toggleComplete: (day: DayKey, id: string) => void;
   deleteTodo: (day: DayKey, id: string) => void;
+  moveTodoToTomorrow: (day: DayKey, id: string) => void;
 
   reorderTodos: (day: DayKey, newOrderIds: string[], movedId: string) => void;
   clearDay: (day: DayKey) => void;
@@ -160,6 +161,37 @@ export const useTodoStore = create<TodoState>()(
           const remaining = state.days[day].filter((t) => t.id !== id && t.parentId !== id);
           return {
             days: { ...state.days, [day]: densifyOrder(remaining) },
+            historyLength: _hist.length,
+          };
+        });
+      },
+
+      moveTodoToTomorrow: (day, id) => {
+        pushHist(get().days);
+        set((state) => {
+          const todo = state.days[day].find((t) => t.id === id);
+          if (!todo) return {};
+          const children = state.days[day].filter((t) => t.parentId === id);
+          const newParentId = newId();
+          const childIdMap = new Map(children.map((c) => [c.id, newId()]));
+          const base = state.days.tomorrow.length;
+          const moved: Todo[] = [
+            { ...todo, id: newParentId, parentId: null, completed: false, order: base },
+            ...children.map((c, i) => ({
+              ...c,
+              id: childIdMap.get(c.id)!,
+              parentId: newParentId,
+              completed: false,
+              order: base + 1 + i,
+            })),
+          ];
+          const remaining = state.days[day].filter((t) => t.id !== id && t.parentId !== id);
+          return {
+            days: {
+              ...state.days,
+              [day]: densifyOrder(remaining),
+              tomorrow: densifyOrder([...state.days.tomorrow, ...moved]),
+            },
             historyLength: _hist.length,
           };
         });
