@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './TimelineView.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
+import { hapticGrab, hapticTick, hapticReorder, hapticDrop, hapticDelete } from '../lib/haptics';
 import type { DayKey, Todo } from '../types/todo';
 
 /* ── 하루 기준: 새벽 4시 ── */
@@ -267,6 +268,8 @@ export function TimelineView({ day }: TimelineViewProps) {
   const subDragRef             = useRef<SubDragState | null>(null);
   const [subDragParentTarget, setSubDragParentTarget] = useState<string | null>(null);
   const subDragParentTargetRef = useRef<string | null>(null);
+  const lastSnapRef            = useRef<number | null>(null);
+  const lastSubOrderRef        = useRef<string | null>(null);
   useEffect(() => { dragRef.current = drag; });
   useEffect(() => { unscheduledDragRef.current = unscheduledDrag; });
   useEffect(() => { swipeRef.current = swipe; });
@@ -379,6 +382,8 @@ export function TimelineView({ day }: TimelineViewProps) {
       containerBottom: cr.bottom,
       containerLeft:   cr.left,
     };
+    hapticGrab();
+    lastSnapRef.current = toVirt(todo.time!);
     setDrag(ds);
     dragRef.current = ds;
   };
@@ -419,6 +424,8 @@ export function TimelineView({ day }: TimelineViewProps) {
       parentId,
       siblingIds,
     };
+    hapticGrab();
+    lastSubOrderRef.current = siblingIds.join(',');
     setSubDrag(ds);
     subDragRef.current = ds;
     setProposedSubOrder(siblingIds);
@@ -447,6 +454,8 @@ export function TimelineView({ day }: TimelineViewProps) {
       timelineLeft: cr.left,
       anchors,
     };
+    hapticGrab();
+    lastSnapRef.current = null;
     setUnscheduledDrag(ds);
     unscheduledDragRef.current = ds;
   };
@@ -469,6 +478,7 @@ export function TimelineView({ day }: TimelineViewProps) {
     const onEnd = () => {
       const s = swipeRef.current;
       if (s && s.direction === 'h' && s.startX - s.currentX >= 72) {
+        hapticDelete();
         deleteTodo(day, s.todoId);
       }
       setSwipe(null);
@@ -487,12 +497,22 @@ export function TimelineView({ day }: TimelineViewProps) {
   /* ── 드래그 이동·종료 ── */
   useEffect(() => {
     if (!drag) return;
-    const onMove = (e: PointerEvent) =>
+    const onMove = (e: PointerEvent) => {
+      const ds = dragRef.current;
+      if (ds) {
+        const newSnap = calcProposedTime({ ...ds, currentY: e.clientY });
+        if (lastSnapRef.current !== newSnap) {
+          hapticTick();
+          lastSnapRef.current = newSnap;
+        }
+      }
       setDrag(prev => prev ? { ...prev, currentY: e.clientY } : null);
+    };
     const onEnd = () => {
       const ds = dragRef.current;
       if (!ds) return;
       const isOutside = ds.currentY < ds.containerTop || ds.currentY > ds.containerBottom;
+      hapticDrop();
       setTodoTime(day, ds.todoId, isOutside ? null : fromVirt(calcProposedTime(ds)));
       setDrag(null);
     };
@@ -511,6 +531,19 @@ export function TimelineView({ day }: TimelineViewProps) {
   useEffect(() => {
     if (!unscheduledDrag) return;
     const onMove = (e: PointerEvent) => {
+      const ds = unscheduledDragRef.current;
+      if (ds) {
+        const overTl = e.clientY >= ds.timelineTop && e.clientY <= ds.timelineBottom;
+        if (overTl) {
+          const newSnap = calcTimeFromY(e.clientY, ds.anchors, ds.timelineTop, ds.timelineBottom);
+          if (lastSnapRef.current !== newSnap) {
+            hapticTick();
+            lastSnapRef.current = newSnap;
+          }
+        } else {
+          lastSnapRef.current = null;
+        }
+      }
       setUnscheduledDrag(prev => {
         if (!prev) return null;
         const cr = timelineRef.current?.getBoundingClientRect();
@@ -526,6 +559,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       if (!ds) return;
       const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
       if (overTl) {
+        hapticDrop();
         const t = calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
         setTodoTime(day, ds.todoId, fromVirt(t));
       }
@@ -589,6 +623,11 @@ export function TimelineView({ day }: TimelineViewProps) {
           newOrder.push(p.id);
         }
         if (!inserted) newOrder.push(ds.todoId);
+        const orderKey = newOrder.join(',');
+        if (lastSubOrderRef.current !== orderKey) {
+          hapticReorder();
+          lastSubOrderRef.current = orderKey;
+        }
         setProposedSubOrder(newOrder);
         proposedSubOrderRef.current = newOrder;
       }
@@ -598,10 +637,12 @@ export function TimelineView({ day }: TimelineViewProps) {
       if (!ds) return;
       const target = subDragParentTargetRef.current;
       if (target) {
+        hapticDrop();
         setParentId(day, ds.todoId, target);
       } else {
         const order = proposedSubOrderRef.current;
         if (order && order.length > 1) {
+          hapticDrop();
           reorderSubItems(day, ds.parentId, order);
         }
       }

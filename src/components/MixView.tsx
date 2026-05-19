@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './MixView.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
+import { hapticGrab, hapticTick, hapticReorder, hapticDrop, hapticDelete } from '../lib/haptics';
 import type { DayKey, Todo } from '../types/todo';
 
 const DAY_START_MIN = 4 * 60;
@@ -240,6 +241,8 @@ export function MixView({ day }: MixViewProps) {
   const subDragRef         = useRef<SubDragState | null>(null);
   const [subDragParentTarget, setSubDragParentTarget] = useState<string | null>(null);
   const subDragParentTargetRef = useRef<string | null>(null);
+  const lastSnapRef        = useRef<number | null>(null);
+  const lastSubOrderRef    = useRef<string | null>(null);
   useEffect(() => { dragRef.current = drag; });
   useEffect(() => { unscheduledDragRef.current = unscheduledDrag; });
   useEffect(() => { swipeRef.current = swipe; });
@@ -350,6 +353,8 @@ export function MixView({ day }: MixViewProps) {
       containerBottom: cr.bottom,
       containerLeft:   cr.left,
     };
+    hapticGrab();
+    lastSnapRef.current = toVirt(todo.time!);
     setDrag(ds);
     dragRef.current = ds;
   };
@@ -388,6 +393,8 @@ export function MixView({ day }: MixViewProps) {
       parentId,
       siblingIds,
     };
+    hapticGrab();
+    lastSubOrderRef.current = siblingIds.join(',');
     setSubDrag(ds);
     subDragRef.current = ds;
     setProposedSubOrder(siblingIds);
@@ -415,6 +422,8 @@ export function MixView({ day }: MixViewProps) {
       timelineLeft: cr.left,
       anchors,
     };
+    hapticGrab();
+    lastSnapRef.current = null;
     setUnscheduledDrag(ds);
     unscheduledDragRef.current = ds;
   };
@@ -436,6 +445,7 @@ export function MixView({ day }: MixViewProps) {
     const onEnd = () => {
       const s = swipeRef.current;
       if (s && s.direction === 'h' && s.startX - s.currentX >= 72) {
+        hapticDelete();
         deleteTodo(day, s.todoId);
       }
       setSwipe(null);
@@ -453,12 +463,22 @@ export function MixView({ day }: MixViewProps) {
 
   useEffect(() => {
     if (!drag) return;
-    const onMove = (e: PointerEvent) =>
+    const onMove = (e: PointerEvent) => {
+      const ds = dragRef.current;
+      if (ds) {
+        const newSnap = calcProposedTime({ ...ds, currentY: e.clientY });
+        if (lastSnapRef.current !== newSnap) {
+          hapticTick();
+          lastSnapRef.current = newSnap;
+        }
+      }
       setDrag(prev => prev ? { ...prev, currentY: e.clientY } : null);
+    };
     const onEnd = () => {
       const ds = dragRef.current;
       if (!ds) return;
       const isOutside = ds.currentY < ds.containerTop || ds.currentY > ds.containerBottom;
+      hapticDrop();
       setTodoTime(day, ds.todoId, isOutside ? null : fromVirt(calcProposedTime(ds)));
       setDrag(null);
     };
@@ -476,6 +496,19 @@ export function MixView({ day }: MixViewProps) {
   useEffect(() => {
     if (!unscheduledDrag) return;
     const onMove = (e: PointerEvent) => {
+      const ds = unscheduledDragRef.current;
+      if (ds) {
+        const overTl = e.clientY >= ds.timelineTop && e.clientY <= ds.timelineBottom;
+        if (overTl) {
+          const newSnap = calcTimeFromY(e.clientY, ds.anchors, ds.timelineTop, ds.timelineBottom);
+          if (lastSnapRef.current !== newSnap) {
+            hapticTick();
+            lastSnapRef.current = newSnap;
+          }
+        } else {
+          lastSnapRef.current = null;
+        }
+      }
       setUnscheduledDrag(prev => {
         if (!prev) return null;
         const cr = timelineRef.current?.getBoundingClientRect();
@@ -491,6 +524,7 @@ export function MixView({ day }: MixViewProps) {
       if (!ds) return;
       const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
       if (overTl) {
+        hapticDrop();
         const t = calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
         setTodoTime(day, ds.todoId, fromVirt(t));
       }
@@ -556,6 +590,11 @@ export function MixView({ day }: MixViewProps) {
           newOrder.push(p.id);
         }
         if (!inserted) newOrder.push(ds.todoId);
+        const orderKey = newOrder.join(',');
+        if (lastSubOrderRef.current !== orderKey) {
+          hapticReorder();
+          lastSubOrderRef.current = orderKey;
+        }
         setProposedSubOrder(newOrder);
         proposedSubOrderRef.current = newOrder;
       }
@@ -565,10 +604,12 @@ export function MixView({ day }: MixViewProps) {
       if (!ds) return;
       const target = subDragParentTargetRef.current;
       if (target) {
+        hapticDrop();
         setParentId(day, ds.todoId, target);
       } else {
         const order = proposedSubOrderRef.current;
         if (order && order.length > 1) {
+          hapticDrop();
           reorderSubItems(day, ds.parentId, order);
         }
       }

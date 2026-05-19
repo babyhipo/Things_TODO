@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { hapticGrab, hapticDrop } from '../lib/haptics';
 import {
   DndContext,
   DragOverlay,
@@ -100,6 +101,7 @@ export function TodoList() {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const handleDragStart = (event: DragStartEvent) => {
+    hapticGrab();
     setActiveId(String(event.active.id));
   };
 
@@ -109,6 +111,7 @@ export function TodoList() {
       const oldIndex = ids.indexOf(String(active.id));
       const newIndex = ids.indexOf(String(over.id));
       if (oldIndex !== -1 && newIndex !== -1) {
+        hapticDrop();
         const newIds = arrayMove(ids, oldIndex, newIndex);
         reorderTodos(activeDay, newIds, String(active.id));
       }
