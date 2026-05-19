@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import styles from './ListToolbar.module.css';
 import { useTodoStore } from '../store/useTodoStore';
+import { fireConfetti } from '../lib/useConfetti';
 import type { DayKey } from '../types/todo';
 
 interface ListToolbarProps {
@@ -33,6 +35,7 @@ export function ListToolbar({ day }: ListToolbarProps) {
   const undo           = useTodoStore((s) => s.undo);
   const historyLength  = useTodoStore((s) => s.historyLength);
   const todos          = useTodoStore((s) => s.days[day]);
+  const [clapping, setClapping] = useState(false);
 
   const hasDuplicates = (() => {
     const seen = new Set<string>();
@@ -44,8 +47,24 @@ export function ListToolbar({ day }: ListToolbarProps) {
     });
   })();
 
+  const handleClap = () => {
+    if (clapping) return;
+    setClapping(true);
+    fireConfetti();
+    setTimeout(() => setClapping(false), 1000);
+  };
+
   return (
     <div className={styles.bar}>
+      <button
+        type="button"
+        className={`${styles.clapBtn} ${clapping ? styles.clapBtnActive : ''}`}
+        onClick={handleClap}
+        aria-label="박수"
+      >
+        👏
+      </button>
+      <div className={styles.spacer} />
       <button
         type="button"
         className={styles.undoBtn}
