@@ -270,6 +270,8 @@ export function TimelineView({ day }: TimelineViewProps) {
   const subDragParentTargetRef = useRef<string | null>(null);
   const lastSnapRef            = useRef<number | null>(null);
   const lastSubOrderRef        = useRef<string | null>(null);
+  const pillRef                = useRef<HTMLDivElement>(null);
+  const ghostRef               = useRef<HTMLDivElement>(null);
   useEffect(() => { dragRef.current = drag; });
   useEffect(() => { unscheduledDragRef.current = unscheduledDrag; });
   useEffect(() => { swipeRef.current = swipe; });
@@ -382,7 +384,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       containerBottom: cr.bottom,
       containerLeft:   cr.left,
     };
-    hapticGrab();
+    hapticGrab(er ? el : undefined);
     lastSnapRef.current = toVirt(todo.time!);
     setDrag(ds);
     dragRef.current = ds;
@@ -424,7 +426,8 @@ export function TimelineView({ day }: TimelineViewProps) {
       parentId,
       siblingIds,
     };
-    hapticGrab();
+    const childEl = document.querySelector<HTMLElement>(`[data-sub-id="${child.id}"]`);
+    hapticGrab(childEl ?? undefined);
     lastSubOrderRef.current = siblingIds.join(',');
     setSubDrag(ds);
     subDragRef.current = ds;
@@ -502,7 +505,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       if (ds) {
         const newSnap = calcProposedTime({ ...ds, currentY: e.clientY });
         if (lastSnapRef.current !== newSnap) {
-          hapticTick();
+          hapticTick(pillRef.current);
           lastSnapRef.current = newSnap;
         }
       }
@@ -512,7 +515,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       const ds = dragRef.current;
       if (!ds) return;
       const isOutside = ds.currentY < ds.containerTop || ds.currentY > ds.containerBottom;
-      hapticDrop();
+      hapticDrop(pillRef.current);
       setTodoTime(day, ds.todoId, isOutside ? null : fromVirt(calcProposedTime(ds)));
       setDrag(null);
     };
@@ -537,7 +540,7 @@ export function TimelineView({ day }: TimelineViewProps) {
         if (overTl) {
           const newSnap = calcTimeFromY(e.clientY, ds.anchors, ds.timelineTop, ds.timelineBottom);
           if (lastSnapRef.current !== newSnap) {
-            hapticTick();
+            hapticTick(pillRef.current);
             lastSnapRef.current = newSnap;
           }
         } else {
@@ -559,7 +562,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       if (!ds) return;
       const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
       if (overTl) {
-        hapticDrop();
+        hapticDrop(pillRef.current);
         const t = calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
         setTodoTime(day, ds.todoId, fromVirt(t));
       }
@@ -625,7 +628,7 @@ export function TimelineView({ day }: TimelineViewProps) {
         if (!inserted) newOrder.push(ds.todoId);
         const orderKey = newOrder.join(',');
         if (lastSubOrderRef.current !== orderKey) {
-          hapticReorder();
+          hapticReorder(ghostRef.current);
           lastSubOrderRef.current = orderKey;
         }
         setProposedSubOrder(newOrder);
@@ -637,12 +640,12 @@ export function TimelineView({ day }: TimelineViewProps) {
       if (!ds) return;
       const target = subDragParentTargetRef.current;
       if (target) {
-        hapticDrop();
+        hapticDrop(ghostRef.current);
         setParentId(day, ds.todoId, target);
       } else {
         const order = proposedSubOrderRef.current;
         if (order && order.length > 1) {
-          hapticDrop();
+          hapticDrop(ghostRef.current);
           reorderSubItems(day, ds.parentId, order);
         }
       }
@@ -971,7 +974,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       {drag && (
         <div className={styles.floatingIndicator}
           style={{ top: drag.currentY, left: drag.containerLeft }}>
-          <div className={styles.floatingPill}>{formatTime(calcProposedTime(drag))}</div>
+          <div ref={pillRef} className={styles.floatingPill}>{formatTime(calcProposedTime(drag))}</div>
           <div className={styles.floatingLine} />
         </div>
       )}
@@ -980,7 +983,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       {unscheduledDrag && isOverTl && unscheduledProposedTime !== null && (
         <div className={styles.floatingIndicator}
           style={{ top: unscheduledDrag.currentY, left: unscheduledDrag.timelineLeft }}>
-          <div className={styles.floatingPill}>{formatTime(unscheduledProposedTime)}</div>
+          <div ref={pillRef} className={styles.floatingPill}>{formatTime(unscheduledProposedTime)}</div>
           <div className={styles.floatingLine} />
         </div>
       )}
@@ -995,7 +998,7 @@ export function TimelineView({ day }: TimelineViewProps) {
 
       {/* 하위 일정 드래그: 부모 변경 대상 위에 있을 때만 인디케이터 표시 */}
       {subDrag && (
-        <div className={styles.ghostCard}
+        <div ref={ghostRef} className={styles.ghostCard}
           style={{
             top: subDrag.currentY,
             left: subDrag.timelineLeft + 56,
