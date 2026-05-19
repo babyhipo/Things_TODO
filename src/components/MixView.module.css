@@ -86,25 +86,19 @@
   z-index: 3;
 }
 
-/* 부모 카드 바로 뒤 첫 자식: 0px */
+/* 부모 카드 바로 뒤 첫 자식 */
 .eventRow + .subItem {
-  margin-top: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  margin-top: 5px;
 }
 
-/* 자식 사이: 붙이기 */
+/* 자식 사이 간격 */
 .subItem + .subItem {
-  margin-top: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  margin-top: 3px;
 }
 
-/* 다음 자식이 있는 자식: 하단 직각 */
+/* 다음 자식이 있는 자식 */
 .subItem:has(+ .subItem) {
   margin-bottom: 0;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
 /* 마지막 자식: 다음 그룹과의 간격 */
