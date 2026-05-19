@@ -3,8 +3,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 5px 12px 5px 10px;
-  min-height: 36px;
+  padding: 3px 12px 3px 10px;
+  min-height: 28px;
   background-color: var(--color-bg-card, #FFFFFF);
   border-radius: var(--radius-md, 8px);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -28,8 +28,66 @@
 
 .itemSub {
   margin-left: 40px;
-  min-height: 32px;
+  min-height: 26px;
+  padding-top: 2px;
+  padding-bottom: 2px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  background-color: #F7FBFF;
+  position: relative;
+  z-index: 1;
+}
+
+/* 부모-자식 카드 붙이기 */
+.item:has(+ .itemSub) {
+  position: relative;
+  z-index: 2;
+}
+
+/* 부모 → 첫 번째 자식: 0px */
+.item:not(.itemSub) + .itemSub {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* 자식 → 자식: -1px */
+.itemSub + .itemSub {
+  margin-top: -1px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.itemSub:has(+ .itemSub) {
+  margin-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* 자식은 항상 부모보다 뒤: .item:has(+.itemSub)와 명시도 동일하므로 뒤에 위치해야 이김 */
+.item.itemSub {
+  z-index: 1;
+}
+
+.itemSub .handleIcon {
+  width: 10px;
+  height: 8px;
+}
+.itemSub .handleIcon::before { top: 2px; }
+.itemSub .handleIcon::after  { bottom: 2px; }
+
+.itemSub .textButton,
+.itemSub .textInput {
+  font-size: 10px;
+}
+
+.itemSub .checkbox {
+  width: 20px;
+  height: 20px;
+}
+
+.itemSub .checkboxInner {
+  width: 12px;
+  height: 12px;
 }
 
 /* 자식 카드: timeEmpty 너비를 0으로 줄여 gap만 남김 → 부모(시간 있음) 체크박스와 정렬 */
@@ -146,24 +204,21 @@
 /* 하위 일정 추가 버튼 */
 .addSubButton {
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1;
-  color: var(--color-text-muted, #8A8A82);
-  border-radius: var(--radius-sm, 4px);
-  border: 1.5px solid var(--color-line, #E2E5F0);
+  color: var(--color-line, #E2E5F0);
+  border: none;
   background-color: transparent;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition: color 120ms ease;
 }
 
 .addSubButtonActive {
   color: var(--color-accent, #3B5BDB);
-  border-color: var(--color-accent, #3B5BDB);
-  background-color: rgba(59, 91, 219, 0.08);
 }
 
 .addSubButton:not(.addSubButtonActive):hover,
@@ -242,7 +297,7 @@
   flex: 1 1 auto;
   min-width: 0;
   text-align: left;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--color-text, #1F1F1F);
   padding: 2px 0;
@@ -259,7 +314,7 @@
 .textInput {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--color-text, #1F1F1F);
   padding: 2px 0;

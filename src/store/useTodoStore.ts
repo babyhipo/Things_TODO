@@ -37,6 +37,7 @@ interface TodoState {
   createEmptyTemplate: () => string;
   setTodoTime: (day: DayKey, id: string, time: number | null) => void;
   setParentId: (day: DayKey, id: string, parentId: string | null) => void;
+  reorderSubItems: (day: DayKey, parentId: string, newOrderIds: string[]) => void;
 
   performRolloverIfNeeded: () => void;
 }
@@ -324,6 +325,26 @@ export const useTodoStore = create<TodoState>()(
             [day]: state.days[day].map((t) => (t.id === id ? { ...t, parentId } : t)),
           },
         }));
+      },
+
+      reorderSubItems: (day, parentId, newOrderIds) => {
+        set((state) => {
+          const list = [...state.days[day]].sort((a, b) => a.order - b.order);
+          const result: Todo[] = [];
+          let inserted = false;
+          for (const t of list) {
+            if (t.parentId === parentId) continue; // 나중에 삽입
+            result.push({ ...t, order: result.length });
+            if (t.id === parentId && !inserted) {
+              for (const id of newOrderIds) {
+                const child = list.find((c) => c.id === id);
+                if (child) result.push({ ...child, order: result.length });
+              }
+              inserted = true;
+            }
+          }
+          return { days: { ...state.days, [day]: result } };
+        });
       },
 
       updateTemplate: (templateId, name, items) => {

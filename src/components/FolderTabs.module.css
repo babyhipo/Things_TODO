@@ -1,7 +1,7 @@
 .container {
   display: flex;
   align-items: flex-end;
-  padding: 14px 16px 0;
+  padding: 8px 16px 0;
   background: var(--color-bg);
   gap: 0;
 }
@@ -20,7 +20,7 @@
 .tabActive {
   background: var(--color-accent, #3B5BDB);
   border-radius: 14px 14px 0 0;
-  padding: 18px 24px 18px;
+  padding: 12px 24px 12px;
   z-index: 2;
   margin-right: -12px;
   box-shadow: 3px 0 10px rgba(59, 91, 219, 0.18);
@@ -30,7 +30,7 @@
 .tabInactive {
   background: var(--color-accent-light, #EEF2FF);
   border-radius: 12px 12px 0 0;
-  padding: 12px 18px 18px 24px;
+  padding: 8px 18px 12px 24px;
   z-index: 1;
   box-shadow: 0 -2px 8px rgba(59, 91, 219, 0.08);
 }

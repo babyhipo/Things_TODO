@@ -1,7 +1,7 @@
 .pill {
   position: fixed;
   right: 20px;
-  bottom: calc(68px + env(safe-area-inset-bottom) + 6px);
+  bottom: calc(68px + env(safe-area-inset-bottom) - 4px);
   z-index: 25;
 
   display: flex;

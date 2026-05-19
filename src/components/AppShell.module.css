@@ -30,7 +30,7 @@
   -webkit-overflow-scrolling: touch;
   background-color: #FFFFFF;
   --color-bg: #FFFFFF;
-  padding-top: 16px;
+  padding-top: 8px;
 }
 
 /* 입력 바: 하단 네비 위에 떠 있음 */

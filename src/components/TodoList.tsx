@@ -49,8 +49,8 @@ function getGapAfter(
   const current = todos[index];
   const next = todos[index + 1];
   if (!next) return 0;
-  if (!current.parentId && next.parentId === current.id) return 2;
-  if (current.parentId && next.parentId === current.parentId) return 2;
+  if (!current.parentId && next.parentId === current.id) return 0;
+  if (current.parentId && next.parentId === current.parentId) return 0;
   return 6;
 }
 

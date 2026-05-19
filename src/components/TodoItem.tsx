@@ -187,8 +187,8 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
       onKeyDown={handleRowKeyDown}
       {...attributes}
     >
-      {/* 시간 */}
-      {todo.time !== null ? (
+      {/* 시간 (자식카드는 시간 미표시) */}
+      {!isSub && todo.time !== null ? (
         <div className={styles.timeWrap} aria-label={`시간 ${formatTime(todo.time)}`}>
           <span className={styles.time} style={{ color: timeColor }}>{formatTime(todo.time)}</span>
           {todo.endTime != null && (
@@ -265,12 +265,6 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
         </div>
       ) : null}
 
-      {/* 느낌표 알림 */}
-      {isOverdue ? (
-        <span className={styles.warnBadge} aria-label="시간이 지났습니다">
-          !
-        </span>
-      ) : null}
 
       {/* 하위 일정 추가 버튼 (루트 아이템만, 드래그 그립 바로 왼쪽) */}
       {!isSub && !editing ? (

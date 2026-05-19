@@ -89,6 +89,9 @@ interface SubDragState {
   timelineBottom: number;
   timelineLeft: number;
   anchors: CardAnchor[];
+  parentId: string;
+  siblingIds: string[];
+  timelineWidth: number;
 }
 
 const SNAP = 5;
@@ -210,6 +213,7 @@ export function TimelineView({ day }: TimelineViewProps) {
   const updateTodoText     = useTodoStore((s) => s.updateTodoText);
   const setTodoTime        = useTodoStore((s) => s.setTodoTime);
   const setParentId        = useTodoStore((s) => s.setParentId);
+  const reorderSubItems    = useTodoStore((s) => s.reorderSubItems);
   const pendingParentId    = useTodoStore((s) => s.pendingParentId);
   const setPendingParentId = useTodoStore((s) => s.setPendingParentId);
   const now = useNowMinutes();
@@ -258,6 +262,8 @@ export function TimelineView({ day }: TimelineViewProps) {
   const swipeRef = useRef<SwipeState | null>(null);
   const timelineRef            = useRef<HTMLDivElement>(null);
   const [subDrag, setSubDrag]  = useState<SubDragState | null>(null);
+  const [proposedSubOrder, setProposedSubOrder] = useState<string[] | null>(null);
+  const proposedSubOrderRef = useRef<string[] | null>(null);
   const subDragRef             = useRef<SubDragState | null>(null);
   const [subDragParentTarget, setSubDragParentTarget] = useState<string | null>(null);
   const subDragParentTargetRef = useRef<string | null>(null);
@@ -396,6 +402,10 @@ export function TimelineView({ day }: TimelineViewProps) {
       const r = el.getBoundingClientRect();
       return [{ todoId: t.id, time: toVirt(t.time!), centerY: r.top + r.height / 2 }];
     });
+    const parentId = child.parentId!;
+    const siblingIds = (childrenByParent.get(parentId) ?? [])
+      .slice().sort((a, b) => a.order - b.order)
+      .map(c => c.id);
     const ds: SubDragState = {
       todoId: child.id,
       text: child.text,
@@ -404,10 +414,15 @@ export function TimelineView({ day }: TimelineViewProps) {
       timelineTop: cr.top,
       timelineBottom: cr.bottom,
       timelineLeft: cr.left,
+      timelineWidth: cr.width,
       anchors,
+      parentId,
+      siblingIds,
     };
     setSubDrag(ds);
     subDragRef.current = ds;
+    setProposedSubOrder(siblingIds);
+    proposedSubOrderRef.current = siblingIds;
   };
 
   /* ── 언스케줄 드래그 시작 ── */
@@ -527,7 +542,7 @@ export function TimelineView({ day }: TimelineViewProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!unscheduledDrag, day, setTodoTime]);
 
-  /* ── 하위 일정 드래그: 부모 변경 or 시간 지정 ── */
+  /* ── 하위 일정 드래그: 부모 변경 or 형제 순서 변경 ── */
   useEffect(() => {
     if (!subDrag) return;
     const onMove = (e: PointerEvent) => {
@@ -553,6 +568,30 @@ export function TimelineView({ day }: TimelineViewProps) {
       }
       subDragParentTargetRef.current = found;
       setSubDragParentTarget(found);
+
+      if (!found) {
+        const ds = subDragRef.current;
+        if (!ds) return;
+        const others = ds.siblingIds.filter(id => id !== ds.todoId);
+        const positions = others.map(id => {
+          const el = document.querySelector<HTMLElement>(`[data-sub-id="${id}"]`);
+          const rect = el?.getBoundingClientRect();
+          return { id, centerY: rect ? rect.top + rect.height / 2 : 0 };
+        }).sort((a, b) => a.centerY - b.centerY);
+
+        let newOrder: string[] = [];
+        let inserted = false;
+        for (const p of positions) {
+          if (!inserted && e.clientY < p.centerY) {
+            newOrder.push(ds.todoId);
+            inserted = true;
+          }
+          newOrder.push(p.id);
+        }
+        if (!inserted) newOrder.push(ds.todoId);
+        setProposedSubOrder(newOrder);
+        proposedSubOrderRef.current = newOrder;
+      }
     };
     const onEnd = () => {
       const ds = subDragRef.current;
@@ -561,16 +600,17 @@ export function TimelineView({ day }: TimelineViewProps) {
       if (target) {
         setParentId(day, ds.todoId, target);
       } else {
-        const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
-        if (overTl) {
-          const t = calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
-          setTodoTime(day, ds.todoId, fromVirt(t));
+        const order = proposedSubOrderRef.current;
+        if (order && order.length > 1) {
+          reorderSubItems(day, ds.parentId, order);
         }
       }
       setSubDrag(null);
       subDragRef.current = null;
       subDragParentTargetRef.current = null;
       setSubDragParentTarget(null);
+      setProposedSubOrder(null);
+      proposedSubOrderRef.current = null;
     };
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerup', onEnd);
@@ -799,7 +839,6 @@ export function TimelineView({ day }: TimelineViewProps) {
                         {todo.text || <span className={styles.noText}>(내용 없음)</span>}
                       </button>
                     )}
-                    {!editingId && isOverdue && <span className={styles.overdueBadge}>지남</span>}
                   </div>
                   {/* 하위 일정 추가 버튼 (루트 아이템만) */}
                   {!todo.parentId && (
@@ -827,14 +866,14 @@ export function TimelineView({ day }: TimelineViewProps) {
               </div>
             );
 
-            const children = (childrenByParent.get(todo.id) ?? [])
-              .slice().sort((a, b) => {
-                if (a.time == null && b.time == null) return a.order - b.order;
-                if (a.time == null) return 1;
-                if (b.time == null) return -1;
-                if (a.time !== b.time) return a.time - b.time;
-                return a.order - b.order;
-              });
+            const rawChildren = (childrenByParent.get(todo.id) ?? [])
+              .slice().sort((a, b) => a.order - b.order);
+
+            const isThisParentDragging = subDrag?.parentId === todo.id;
+            const displayChildren = isThisParentDragging && proposedSubOrder
+              ? [...rawChildren].sort((a, b) =>
+                  proposedSubOrder.indexOf(a.id) - proposedSubOrder.indexOf(b.id))
+              : rawChildren;
 
             return (
               <div key={todo.id}>
@@ -844,15 +883,13 @@ export function TimelineView({ day }: TimelineViewProps) {
                 {isDragging
                   ? <div style={{ height: 0, overflow: 'visible' }}>{card}</div>
                   : card}
-                {!isDragging && children.map(child => (
+                {!isDragging && displayChildren.map(child => (
                   <div
                     key={child.id}
+                    data-sub-id={child.id}
                     className={`${styles.subItem} ${child.completed ? styles.subItemDone : ''} ${subDrag?.todoId === child.id ? styles.subItemDragging : ''}`}
                   >
                     <span className={styles.subItemArrow} aria-hidden="true">└</span>
-                    <span className={styles.subItemTime}>
-                      {child.time != null ? formatTime(child.time) : ''}
-                    </span>
                     {/* 체크박스 (시간 바로 우측) */}
                     <button
                       type="button"
@@ -915,19 +952,14 @@ export function TimelineView({ day }: TimelineViewProps) {
         </div>
       )}
 
-      {/* 하위 일정 드래그: 시간 지정 모드 플로팅 인디케이터 */}
-      {subDrag && !subDragParentTarget && subDrag.currentY >= subDrag.timelineTop && subDrag.currentY <= subDrag.timelineBottom && (
-        <div className={styles.floatingIndicator}
-          style={{ top: subDrag.currentY, left: subDrag.timelineLeft }}>
-          <div className={styles.floatingPill}>
-            {formatTime(fromVirt(calcTimeFromY(subDrag.currentY, subDrag.anchors, subDrag.timelineTop, subDrag.timelineBottom)))}
-          </div>
-          <div className={styles.floatingLine} />
-        </div>
-      )}
+      {/* 하위 일정 드래그: 부모 변경 대상 위에 있을 때만 인디케이터 표시 */}
       {subDrag && (
         <div className={styles.ghostCard}
-          style={{ top: subDrag.currentY, left: subDrag.timelineLeft + 64 }}>
+          style={{
+            top: subDrag.currentY,
+            left: subDrag.timelineLeft + 56,
+            width: subDrag.timelineWidth - 72,
+          }}>
           {subDrag.text || '(내용 없음)'}
         </div>
       )}
