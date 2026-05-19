@@ -124,10 +124,10 @@
   left: -64px;
   top: 0;
   width: 64px;
+  height: 100%;
   display: flex;
   align-items: center;
   gap: 2px;
-  padding-top: 8px;
 }
 
 /* 구간 일정: 상단 정렬로 dot이 시작 시간에 붙음 */

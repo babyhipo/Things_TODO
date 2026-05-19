@@ -255,8 +255,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  /* 체크박스 원 중앙에 시작 시간이 오도록 상단 여백 */
-  padding-top: 6px;
+  justify-content: center;
 }
 
 .time {
