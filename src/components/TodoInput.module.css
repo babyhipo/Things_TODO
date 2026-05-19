@@ -7,13 +7,13 @@
   display: flex;
   align-items: center;
   gap: var(--space-2, 8px);
-  padding: 6px var(--space-4, 16px);
+  padding: 4px var(--space-4, 16px);
 }
 
 .templateButton {
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -30,7 +30,7 @@
 .input {
   flex: 1 1 auto;
   min-width: 0;
-  height: 36px;
+  height: 30px;
   font-size: var(--font-size-md, 16px);
   color: var(--color-text, #1F1F1F);
   padding: 0 var(--space-3, 12px);
@@ -108,7 +108,7 @@
 .amButton,
 .pmButton {
   flex: 0 0 auto;
-  height: 36px;
+  height: 30px;
   padding: 0 10px;
   display: inline-flex;
   align-items: center;
