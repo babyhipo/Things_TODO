@@ -872,7 +872,7 @@ export function TimelineView({ day }: TimelineViewProps) {
                       </svg>
                     )}
                   </button>
-                  <div className={styles.cardContent} onPointerDown={e => e.stopPropagation()}>
+                  <div className={styles.cardContent}>
                     {editingId === todo.id ? (
                       <input
                         ref={editInputRef}
@@ -880,6 +880,7 @@ export function TimelineView({ day }: TimelineViewProps) {
                         className={styles.editInput}
                         value={editDraft}
                         onChange={e => setEditDraft(e.target.value)}
+                        onPointerDown={e => e.stopPropagation()}
                         onKeyDown={e => {
                           if (e.key === 'Enter') { e.preventDefault(); commitEdit(todo.id); }
                           if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
