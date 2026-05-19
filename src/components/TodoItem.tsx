@@ -92,7 +92,7 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
 
   const timeColor = (() => {
     if (todo.completed) return '#9CA3AF';
-    if (virtTime === null) return undefined;
+    if (virtTime === null) return '#7C3AED';
     if (isOverdue) return '#EF4444';
     const offset = day === 'tomorrow' ? 1440 : 0;
     const diff = virtTime + offset - virtNow;

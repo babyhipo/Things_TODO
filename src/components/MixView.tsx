@@ -1020,7 +1020,9 @@ export function MixView({ day }: MixViewProps) {
                       className={`${styles.checkbox} ${todo.completed ? styles.checkboxChecked : ''}`}
                       onClick={() => toggleComplete(day, todo.id)}
                     >
-                      <span className={styles.checkboxInner} aria-hidden="true" />
+                      <span className={styles.checkboxInner} aria-hidden="true"
+                        style={{ borderColor: todo.completed ? '#9CA3AF' : '#7C3AED',
+                                 backgroundColor: todo.completed ? '#9CA3AF' : undefined }} />
                     </button>
 
                     <span className={`${styles.unscheduledText} ${todo.completed ? styles.unscheduledTextDone : ''}`}>
