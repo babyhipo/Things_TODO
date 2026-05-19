@@ -42,26 +42,10 @@ export function fireConfetti() {
     });
   }, 400);
 
-  // 0.6초 후 화면 중앙 살짝 하단 — 큰 별 + 네온 컬러 폭발
+  // 0.75초 후 중앙 하단 — 핑크 원형 + 블루·퍼플 사각 동시에
   setTimeout(() => {
     confetti({
-      particleCount: 60,
-      spread: 80,
-      startVelocity: 22,
-      origin: { x: 0.5, y: 0.62 },
-      shapes: ['star'],
-      colors: ['#FF00FF', '#00FFFF', '#39FF14', '#FF073A', '#FFD700'],
-      scalar: 1.8,
-      ticks: 120,
-      gravity: 0.7,
-      zIndex: 9999,
-    });
-  }, 600);
-
-  // 0.85초 후 중앙 하단 — 하트 느낌의 둥근 알갱이 폭포
-  setTimeout(() => {
-    confetti({
-      particleCount: 80,
+      particleCount: 40,
       spread: 55,
       startVelocity: 18,
       origin: { x: 0.5, y: 0.65 },
@@ -73,13 +57,10 @@ export function fireConfetti() {
       drift: 0.1,
       zIndex: 9999,
     });
-  }, 850);
 
-  // 1.1초 후 중앙 하단 — 사각형 색종이 좌우로 퍼짐
-  setTimeout(() => {
     [-0.12, 0.12].forEach((drift) => {
       confetti({
-        particleCount: 35,
+        particleCount: 18,
         spread: 40,
         startVelocity: 26,
         origin: { x: 0.5, y: 0.6 },
@@ -92,5 +73,5 @@ export function fireConfetti() {
         zIndex: 9999,
       });
     });
-  }, 1100);
+  }, 750);
 }
