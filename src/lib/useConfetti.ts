@@ -72,5 +72,5 @@ export function fireConfetti() {
         zIndex: 9999,
       });
     });
-  }, 750);
+  }, 600);
 }
