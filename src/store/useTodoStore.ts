@@ -10,8 +10,10 @@ interface TodoState {
   templates: Template[];
   activeDay: DayKey;
   lastRolloverDate: string;
+  historyLength: number;
 
   setActiveDay: (day: DayKey) => void;
+  undo: () => void;
 
   pendingParentId: string | null;
   setPendingParentId: (id: string | null) => void;
@@ -71,6 +73,15 @@ function insertTodo(list: Todo[], newTodo: Todo): Todo[] {
   return densifyOrder([...sorted, newTodo]);
 }
 
+// ── Undo 히스토리 (메모리 전용, 미지속) ──────────────────────────────────────
+const _hist: Record<DayKey, Todo[]>[] = [];
+const MAX_HIST = 50;
+
+function pushHist(days: Record<DayKey, Todo[]>) {
+  _hist.push({ today: [...days.today], tomorrow: [...days.tomorrow] });
+  if (_hist.length > MAX_HIST) _hist.shift();
+}
+
 export const useTodoStore = create<TodoState>()(
   persist(
     (set, get) => ({
@@ -79,9 +90,16 @@ export const useTodoStore = create<TodoState>()(
       activeDay: 'today',
       lastRolloverDate: getLogicalDate(),
       pendingParentId: null,
+      historyLength: 0,
 
       setActiveDay: (day) => set({ activeDay: day }),
       setPendingParentId: (id) => set({ pendingParentId: id }),
+
+      undo: () => {
+        const snap = _hist.pop();
+        if (!snap) return;
+        set({ days: snap, historyLength: _hist.length });
+      },
 
       addTodo: (day, rawText, meridiemHint, parentId) => {
         const { time, endTime, cleanText } = parseTime(rawText);
@@ -102,13 +120,16 @@ export const useTodoStore = create<TodoState>()(
           order: 0,
           createdAt: new Date().toISOString(),
         };
+        pushHist(get().days);
         set((state) => ({
           days: { ...state.days, [day]: insertTodo(state.days[day], newTodo) },
+          historyLength: _hist.length,
         }));
       },
 
       updateTodoText: (day, id, rawText) => {
         const { time, endTime, cleanText } = parseTime(rawText);
+        pushHist(get().days);
         set((state) => ({
           days: {
             ...state.days,
@@ -116,10 +137,12 @@ export const useTodoStore = create<TodoState>()(
               t.id === id ? { ...t, text: cleanText, time, endTime: endTime ?? null } : t,
             ),
           },
+          historyLength: _hist.length,
         }));
       },
 
       toggleComplete: (day, id) => {
+        pushHist(get().days);
         set((state) => ({
           days: {
             ...state.days,
@@ -127,23 +150,28 @@ export const useTodoStore = create<TodoState>()(
               t.id === id ? { ...t, completed: !t.completed } : t,
             ),
           },
+          historyLength: _hist.length,
         }));
       },
 
       deleteTodo: (day, id) => {
+        pushHist(get().days);
         set((state) => {
           const remaining = state.days[day].filter((t) => t.id !== id && t.parentId !== id);
           return {
             days: { ...state.days, [day]: densifyOrder(remaining) },
+            historyLength: _hist.length,
           };
         });
       },
 
       clearDay: (day) => {
-        set((state) => ({ days: { ...state.days, [day]: [] } }));
+        pushHist(get().days);
+        set((state) => ({ days: { ...state.days, [day]: [] }, historyLength: _hist.length }));
       },
 
       deduplicateDay: (day) => {
+        pushHist(get().days);
         set((state) => {
           const sorted = [...state.days[day]].sort((a, b) => a.order - b.order);
           const seen = new Set<string>();
@@ -153,11 +181,12 @@ export const useTodoStore = create<TodoState>()(
             seen.add(key);
             return true;
           });
-          return { days: { ...state.days, [day]: densifyOrder(deduped) } };
+          return { days: { ...state.days, [day]: densifyOrder(deduped) }, historyLength: _hist.length };
         });
       },
 
       reorderTodos: (day, newOrderIds, movedId) => {
+        pushHist(get().days);
         set((state) => {
           const list = state.days[day];
           const byId = new Map(list.map((t) => [t.id, t] as const));
@@ -175,7 +204,7 @@ export const useTodoStore = create<TodoState>()(
 
           const moved = reordered.find((t) => t.id === movedId);
           if (!moved) {
-            return { days: { ...state.days, [day]: reordered } };
+            return { days: { ...state.days, [day]: reordered }, historyLength: _hist.length };
           }
 
           // 같은 부모를 공유하는 형제만 대상으로 prev/next 탐색
@@ -210,11 +239,12 @@ export const useTodoStore = create<TodoState>()(
           }
 
           const next = reordered.map((t) => (t.id === movedId ? { ...t, time: newTime } : t));
-          return { days: { ...state.days, [day]: next } };
+          return { days: { ...state.days, [day]: next }, historyLength: _hist.length };
         });
       },
 
       indentTodo: (day, id) => {
+        pushHist(get().days);
         set((state) => {
           const list = [...state.days[day]].sort((a, b) => a.order - b.order);
           const target = list.find((t) => t.id === id);
@@ -228,20 +258,23 @@ export const useTodoStore = create<TodoState>()(
           const prev = siblings[idx - 1];
 
           const next = list.map((t) => (t.id === id ? { ...t, parentId: prev.id } : t));
-          return { days: { ...state.days, [day]: next } };
+          return { days: { ...state.days, [day]: next }, historyLength: _hist.length };
         });
       },
 
       outdentTodo: (day, id) => {
+        pushHist(get().days);
         set((state) => ({
           days: {
             ...state.days,
             [day]: state.days[day].map((t) => (t.id === id ? { ...t, parentId: null } : t)),
           },
+          historyLength: _hist.length,
         }));
       },
 
       applyTemplate: (day, templateId) => {
+        pushHist(get().days);
         set((state) => {
           const tpl = state.templates.find((t) => t.id === templateId);
           if (!tpl) return {};
@@ -267,6 +300,7 @@ export const useTodoStore = create<TodoState>()(
             }));
           return {
             days: { ...state.days, [day]: densifyOrder([...existing, ...added]) },
+            historyLength: _hist.length,
           };
         });
       },
@@ -310,24 +344,29 @@ export const useTodoStore = create<TodoState>()(
       },
 
       setTodoTime: (day, id, time) => {
+        pushHist(get().days);
         set((state) => ({
           days: {
             ...state.days,
             [day]: state.days[day].map((t) => (t.id === id ? { ...t, time } : t)),
           },
+          historyLength: _hist.length,
         }));
       },
 
       setParentId: (day, id, parentId) => {
+        pushHist(get().days);
         set((state) => ({
           days: {
             ...state.days,
             [day]: state.days[day].map((t) => (t.id === id ? { ...t, parentId } : t)),
           },
+          historyLength: _hist.length,
         }));
       },
 
       reorderSubItems: (day, parentId, newOrderIds) => {
+        pushHist(get().days);
         set((state) => {
           const list = [...state.days[day]].sort((a, b) => a.order - b.order);
           const result: Todo[] = [];
@@ -343,7 +382,7 @@ export const useTodoStore = create<TodoState>()(
               inserted = true;
             }
           }
-          return { days: { ...state.days, [day]: result } };
+          return { days: { ...state.days, [day]: result }, historyLength: _hist.length };
         });
       },
 

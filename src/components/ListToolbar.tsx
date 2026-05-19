@@ -6,10 +6,33 @@ interface ListToolbarProps {
   day: DayKey;
 }
 
+function UndoIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M2 4.5h6.5a3.5 3.5 0 0 1 0 7H5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4.5 2L2 4.5 4.5 7"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function ListToolbar({ day }: ListToolbarProps) {
-  const clearDay = useTodoStore((s) => s.clearDay);
+  const clearDay       = useTodoStore((s) => s.clearDay);
   const deduplicateDay = useTodoStore((s) => s.deduplicateDay);
-  const todos = useTodoStore((s) => s.days[day]);
+  const undo           = useTodoStore((s) => s.undo);
+  const historyLength  = useTodoStore((s) => s.historyLength);
+  const todos          = useTodoStore((s) => s.days[day]);
 
   const hasDuplicates = (() => {
     const seen = new Set<string>();
@@ -23,6 +46,16 @@ export function ListToolbar({ day }: ListToolbarProps) {
 
   return (
     <div className={styles.bar}>
+      <button
+        type="button"
+        className={styles.undoBtn}
+        onClick={undo}
+        disabled={historyLength === 0}
+        aria-label="되돌리기"
+      >
+        <UndoIcon />
+      </button>
+      <div className={styles.spacer} />
       <button
         type="button"
         className={styles.dedupBtn}
