@@ -1,0 +1,19 @@
+# 라이브러리 취약점을 자동으로 감시하고 업데이트 PR을 열어주는 GitHub 무료 기능
+version: 2
+updates:
+  # npm 패키지 (앱 라이브러리) 매주 점검
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
+  # GitHub Actions (배포 자동화) 버전도 매주 점검
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"

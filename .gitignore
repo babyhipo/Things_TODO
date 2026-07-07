@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# 기획/내부 문서 (공개 저장소 비노출)
+prd.md
+docs/
+
+# 로컬 도구/설정 (공개 저장소 비노출)
+.claude/
+.claire/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
