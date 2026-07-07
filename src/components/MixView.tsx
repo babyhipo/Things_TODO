@@ -4,12 +4,8 @@ import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
 import { hapticGrab, hapticTick, hapticReorder, hapticDrop, hapticDelete } from '../lib/haptics';
 import type { DayKey, Todo } from '../types/todo';
+import { toVirt, DAY_START_MIN } from '../lib/dayBoundary';
 
-const DAY_START_MIN = 4 * 60;
-
-function toVirt(t: number): number {
-  return t < DAY_START_MIN ? t + 1440 : t;
-}
 function fromVirt(t: number): number {
   return t >= 1440 ? t - 1440 : t;
 }

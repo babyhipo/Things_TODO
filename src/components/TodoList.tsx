@@ -21,12 +21,7 @@ import {
 import styles from './TodoList.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import { TodoItem } from './TodoItem';
-
-const DAY_START_MIN = 4 * 60; // 타임라인과 동일: 새벽 4시 기준
-
-function toVirt(t: number): number {
-  return t < DAY_START_MIN ? t + 1440 : t;
-}
+import { toVirt } from '../lib/dayBoundary';
 
 function getCurrentMinutes(): number {
   const d = new Date();

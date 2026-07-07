@@ -4,14 +4,8 @@ import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
 import { hapticGrab, hapticTick, hapticReorder, hapticDrop, hapticDelete } from '../lib/haptics';
 import type { DayKey, Todo } from '../types/todo';
+import { toVirt, DAY_START_MIN } from '../lib/dayBoundary';
 
-/* ── 하루 기준: 새벽 4시 ── */
-const DAY_START_MIN = 4 * 60; // 240
-
-/** 저장값(0~1439) → 가상 시간(240~1679): 새벽 0~3시는 하루 끝에 배치 */
-function toVirt(t: number): number {
-  return t < DAY_START_MIN ? t + 1440 : t;
-}
 /** 가상 시간(240~1679) → 저장값(0~1439) */
 function fromVirt(t: number): number {
   return t >= 1440 ? t - 1440 : t;

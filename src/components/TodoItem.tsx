@@ -10,6 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import styles from './TodoItem.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
+import { toVirt } from '../lib/dayBoundary';
 import type { DayKey, Todo } from '../types/todo';
 
 interface TodoItemProps {
@@ -77,9 +78,6 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
 
   const isSub = todo.parentId !== null;
   const isSelected = pendingParentId === todo.id;
-
-  const DAY_START_MIN = 4 * 60;
-  const toVirt = (t: number) => (t < DAY_START_MIN ? t + 1440 : t);
 
   const virtNow  = toVirt(now);
   const virtTime = todo.time !== null ? toVirt(todo.time) : null;
