@@ -4,171 +4,21 @@ import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
 import { hapticGrab, hapticTick, hapticReorder, hapticDrop, hapticDelete } from '../lib/haptics';
 import type { DayKey, Todo } from '../types/todo';
-import { toVirt, fromVirt, DAY_START_MIN } from '../lib/dayBoundary';
-
-function getCurrentMinutes(): number {
-  const d = new Date();
-  const total = d.getHours() * 60 + d.getMinutes();
-  return total < DAY_START_MIN ? total + 1440 : total;
-}
-function useNowMinutes(): number {
-  const [now, setNow] = useState(getCurrentMinutes);
-  useEffect(() => {
-    const t = setInterval(() => setNow(getCurrentMinutes()), 60_000);
-    return () => clearInterval(t);
-  }, []);
-  return now;
-}
-
-interface CardAnchor {
-  todoId: string;
-  time: number;
-  centerY: number;
-}
-
-interface DragState {
-  todoId: string;
-  originalTime: number;
-  initialCardCenterY: number;
-  cardHeight: number;
-  currentY: number;
-  anchors: CardAnchor[];
-  containerTop: number;
-  containerBottom: number;
-  containerLeft: number;
-}
-
-interface SwipeState {
-  todoId: string;
-  startX: number;
-  startY: number;
-  currentX: number;
-  direction: 'undecided' | 'h' | 'v';
-}
-
-interface UnscheduledDragState {
-  todoId: string;
-  text: string;
-  currentY: number;
-  timelineTop: number;
-  timelineBottom: number;
-  timelineLeft: number;
-  anchors: CardAnchor[];
-}
-
-interface SubDragState {
-  todoId: string;
-  text: string;
-  currentX: number;
-  currentY: number;
-  timelineTop: number;
-  timelineBottom: number;
-  timelineLeft: number;
-  anchors: CardAnchor[];
-  parentId: string;
-  siblingIds: string[]; // 드래그 시작 시 형제 순서 (자신 포함)
-  timelineWidth: number;
-}
-
-const SNAP = 5;
-
-function calcTimeFromY(
-  currentY: number,
-  anchors: CardAnchor[],
-  containerTop: number,
-  containerBottom: number,
-): number {
-  const sorted = [...anchors].sort((a, b) => a.centerY - b.centerY);
-  if (sorted.length === 0) {
-    const t = Math.max(0, Math.min(1, (currentY - containerTop) / Math.max(1, containerBottom - containerTop)));
-    return snapTo(Math.round(DAY_START_MIN + t * (1439 - DAY_START_MIN)));
-  }
-  if (currentY <= sorted[0].centerY) {
-    const t = Math.max(0, (currentY - containerTop) / Math.max(1, sorted[0].centerY - containerTop));
-    return snapTo(Math.max(DAY_START_MIN, Math.round(t * Math.max(DAY_START_MIN, sorted[0].time - SNAP))));
-  }
-  const last = sorted[sorted.length - 1];
-  if (currentY >= last.centerY) {
-    const t = Math.min(1, (currentY - last.centerY) / Math.max(1, containerBottom - last.centerY));
-    const minT = last.time + SNAP;
-    return snapTo(Math.max(minT, Math.min(1679, minT + Math.round(t * (1679 - minT)))));
-  }
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const above = sorted[i], below = sorted[i + 1];
-    if (currentY >= above.centerY && currentY < below.centerY) {
-      const minT = above.time + SNAP, maxT = below.time - SNAP;
-      if (minT > maxT) return snapTo(above.time + Math.round((below.time - above.time) / 2));
-      const t = (currentY - above.centerY) / (below.centerY - above.centerY);
-      return snapTo(Math.max(minT, Math.min(maxT, minT + t * (maxT - minT))));
-    }
-  }
-  return snapTo(DAY_START_MIN + 480);
-}
-
-function calcProposedTime(ds: DragState): number {
-  const { currentY, anchors, originalTime, containerTop, containerBottom } = ds;
-  const sorted = [...anchors].sort((a, b) => a.centerY - b.centerY);
-  if (sorted.length === 0) return originalTime;
-
-  const first = sorted[0];
-  const last  = sorted[sorted.length - 1];
-
-  if (currentY <= first.centerY) {
-    const t = Math.max(0, (currentY - containerTop) / Math.max(1, first.centerY - containerTop));
-    return snapTo(Math.max(0, Math.round(t * Math.max(0, first.time - SNAP))));
-  }
-  if (currentY >= last.centerY) {
-    const t = Math.min(1, (currentY - last.centerY) / Math.max(1, containerBottom - last.centerY));
-    const minT = last.time + SNAP;
-    return snapTo(Math.max(minT, Math.min(1679, minT + Math.round(t * (1679 - minT)))));
-  }
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const above = sorted[i];
-    const below = sorted[i + 1];
-    if (currentY >= above.centerY && currentY < below.centerY) {
-      const minT = above.time + SNAP;
-      const maxT = below.time - SNAP;
-      if (minT > maxT) return snapTo(above.time + Math.round((below.time - above.time) / 2));
-      const t   = (currentY - above.centerY) / (below.centerY - above.centerY);
-      return snapTo(Math.max(minT, Math.min(maxT, minT + t * (maxT - minT))));
-    }
-  }
-  return originalTime;
-}
-
-function snapTo(v: number): number {
-  return Math.round(v / SNAP) * SNAP;
-}
-
-function getInsertionBeforeId(currentY: number, anchors: CardAnchor[]): string | null {
-  const sorted = [...anchors].sort((a, b) => a.centerY - b.centerY);
-  for (const anchor of sorted) {
-    if (currentY < anchor.centerY) return anchor.todoId;
-  }
-  return null;
-}
-
-/* 시간 기반 색상 (TimelineView와 동일한 로직) */
-function eventColor(time: number | null, overdue: boolean, completed: boolean, now: number, day: string): string {
-  if (completed) return '#9CA3AF';
-  if (overdue)   return '#EF4444';
-  if (time === null) return '#7C3AED';
-  const offset = day === 'tomorrow' ? 1440 : 0;
-  const diff = toVirt(time) + offset - now;
-  if (diff <= 60)  return '#F59E0B';
-  return '#3B5BDB';
-}
-
-const SECTION_MARKS = [
-  { virtMin: 12 * 60, label: '오후', key: 'section-pm' },
-  { virtMin: 18 * 60, label: '저녁', key: 'section-eve' },
-];
-
-type Segment =
-  | { type: 'event'; todo: Todo }
-  | { type: 'gap'; fromMin: number; toMin: number; key: string }
-  | { type: 'now'; time: number; key: string }
-  | { type: 'section'; label: string; key: string };
+import { toVirt, fromVirt } from '../lib/dayBoundary';
+import { useNowMinutes } from '../hooks/useNowMinutes';
+import {
+  SECTION_MARKS,
+  calcTimeFromY,
+  calcProposedTime,
+  getInsertionBeforeId,
+  eventColor,
+  type CardAnchor,
+  type DragState,
+  type SwipeState,
+  type UnscheduledDragState,
+  type SubDragState,
+  type Segment,
+} from '../lib/timelineMath';
 
 interface MixViewProps { day: DayKey; }
 
