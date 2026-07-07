@@ -403,7 +403,7 @@ export function TimelineView({ day }: TimelineViewProps) {
   const handleSubDragStart = (e: React.PointerEvent, child: Todo) => {
     e.preventDefault();
     e.stopPropagation();
-    const cr = timelineRef.current?.getBoundingClientRect() ?? { top: 0, bottom: 300, left: 0 };
+    const cr = timelineRef.current?.getBoundingClientRect() ?? { top: 0, bottom: 300, left: 0, width: 0 };
     const anchors: CardAnchor[] = scheduled.flatMap(t => {
       const el = document.querySelector<HTMLElement>(`[data-todo-id="${t.id}"]`);
       if (!el) return [];
