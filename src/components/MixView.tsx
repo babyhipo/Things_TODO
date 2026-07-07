@@ -4,11 +4,7 @@ import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
 import { hapticGrab, hapticTick, hapticReorder, hapticDrop, hapticDelete } from '../lib/haptics';
 import type { DayKey, Todo } from '../types/todo';
-import { toVirt, DAY_START_MIN } from '../lib/dayBoundary';
-
-function fromVirt(t: number): number {
-  return t >= 1440 ? t - 1440 : t;
-}
+import { toVirt, fromVirt, DAY_START_MIN } from '../lib/dayBoundary';
 
 function getCurrentMinutes(): number {
   const d = new Date();

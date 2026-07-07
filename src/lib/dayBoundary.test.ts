@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   toVirt,
+  fromVirt,
   DAY_START_MIN,
   getLogicalDate,
   getNextRolloverTime,
@@ -33,6 +34,22 @@ describe('toVirt — 새벽 시간을 하루 끝으로 보내는 정렬 변환',
 
   it('밤 11시(1380)가 새벽 1시(60)보다 앞서 정렬된다', () => {
     expect(toVirt(1380)).toBeLessThan(toVirt(60));
+  });
+});
+
+describe('fromVirt — toVirt의 역변환 (되돌리기)', () => {
+  it('일반 시간(480)은 그대로', () => {
+    expect(fromVirt(480)).toBe(480);
+  });
+
+  it('가상 새벽 1시(1500)는 실제 60분으로 되돌린다', () => {
+    expect(fromVirt(1500)).toBe(60);
+  });
+
+  it('toVirt로 밀었다가 fromVirt로 되돌리면 원래 값 (왕복 일관성)', () => {
+    expect(fromVirt(toVirt(60))).toBe(60);
+    expect(fromVirt(toVirt(480))).toBe(480);
+    expect(fromVirt(toVirt(0))).toBe(0);
   });
 });
 

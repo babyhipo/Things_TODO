@@ -4,12 +4,7 @@ import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
 import { hapticGrab, hapticTick, hapticReorder, hapticDrop, hapticDelete } from '../lib/haptics';
 import type { DayKey, Todo } from '../types/todo';
-import { toVirt, DAY_START_MIN } from '../lib/dayBoundary';
-
-/** 가상 시간(240~1679) → 저장값(0~1439) */
-function fromVirt(t: number): number {
-  return t >= 1440 ? t - 1440 : t;
-}
+import { toVirt, fromVirt, DAY_START_MIN } from '../lib/dayBoundary';
 
 /* ── 현재 시각 (가상 시간) ── */
 function getCurrentMinutes(): number {

@@ -12,6 +12,11 @@ export function toVirt(t: number): number {
   return t < DAY_START_MIN ? t + 1440 : t;
 }
 
+/** toVirt의 역변환: 가상 시간(1440~1679)을 저장값(0~239)으로 되돌린다. */
+export function fromVirt(t: number): number {
+  return t >= 1440 ? t - 1440 : t;
+}
+
 function pad2(n: number): string {
   return n.toString().padStart(2, '0');
 }

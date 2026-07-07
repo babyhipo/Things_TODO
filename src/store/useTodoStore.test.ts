@@ -166,3 +166,44 @@ describe('performRolloverIfNeeded — 자정(새벽 4시) 넘김', () => {
     expect(useTodoStore.getState().days.today).toHaveLength(1);
   });
 });
+
+describe('템플릿 저장 → 적용 (부모-자식 id 재구성)', () => {
+  it('saveAsTemplate 후 applyTemplate하면 부모-자식 구조가 새 id로 그대로 재현된다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'p', text: '부모', time: 480, order: 0 }),
+          mk({ id: 'c', text: '자식', parentId: 'p', time: 540, order: 1 }),
+        ],
+        tomorrow: [],
+      },
+      templates: [],
+    });
+    store().saveAsTemplate('today', '내 루틴');
+    const tplId = useTodoStore.getState().templates[0].id;
+
+    store().clearDay('today');
+    store().applyTemplate('today', tplId);
+
+    const list = useTodoStore.getState().days.today;
+    expect(list).toHaveLength(2);
+    const parent = list.find((t) => t.text === '부모')!;
+    const child = list.find((t) => t.text === '자식')!;
+    expect(parent.parentId).toBeNull();
+    expect(child.parentId).toBe(parent.id); // 관계 유지
+    expect(parent.id).not.toBe('p'); // 새 id로 재발급
+    expect(parent.time).toBe(480);
+    expect(child.time).toBe(540);
+  });
+
+  it('applyTemplate은 기존 목록을 지우지 않고 뒤에 이어붙인다', () => {
+    useTodoStore.setState({
+      days: { today: [mk({ id: 'x', text: '기존', order: 0 })], tomorrow: [] },
+      templates: [
+        { id: 'tpl', name: 't', items: [{ text: 'A', time: 480, parentId: null, tempId: 'ta', order: 0 }] },
+      ],
+    });
+    store().applyTemplate('today', 'tpl');
+    expect(useTodoStore.getState().days.today.map((t) => t.text)).toEqual(['기존', 'A']);
+  });
+});
