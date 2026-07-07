@@ -3,7 +3,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Todo, Template, DayKey } from '../types/todo';
 import { parseTime } from '../lib/timeParser';
 import { getLogicalDate } from '../lib/dayBoundary';
-import { STORAGE_KEY } from '../lib/storage/localStorageRepo';
+
+// 브라우저 localStorage 저장 키. 기존 사용자 데이터 호환을 위해 값 고정.
+const STORAGE_KEY = 'oneul-todo/v1';
 
 interface TodoState {
   days: Record<DayKey, Todo[]>;
