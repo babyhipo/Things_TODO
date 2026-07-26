@@ -79,7 +79,10 @@ export function TodoList() {
     const result: typeof all = [];
     for (const r of roots) {
       result.push(r);
-      const kids = (childrenByParent.get(r.id) ?? []).slice().sort(cmp);
+      // 하위 항목은 손으로 끌어둔 순서(order) 기준 — 세 뷰 통일
+      const kids = (childrenByParent.get(r.id) ?? [])
+        .slice()
+        .sort((a, b) => a.order - b.order);
       result.push(...kids);
     }
     return result;

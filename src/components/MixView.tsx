@@ -725,14 +725,9 @@ export function MixView({ day }: MixViewProps) {
             </div>
           );
 
+          // 하위 항목은 손으로 끌어둔 순서(order) 기준 — 세 뷰 통일
           const children = (childrenByParent.get(todo.id) ?? [])
-            .slice().sort((a, b) => {
-              if (a.time == null && b.time == null) return a.order - b.order;
-              if (a.time == null) return 1;
-              if (b.time == null) return -1;
-              if (a.time !== b.time) return a.time - b.time;
-              return a.order - b.order;
-            });
+            .slice().sort((a, b) => a.order - b.order);
 
           const isThisParentDragging = subDrag?.parentId === todo.id;
           const displayChildren = isThisParentDragging && proposedSubOrder
