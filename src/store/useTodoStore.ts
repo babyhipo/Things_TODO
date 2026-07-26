@@ -327,6 +327,7 @@ export const useTodoStore = create<TodoState>()(
               id: item.tempId ? (idMap.get(item.tempId) as string) : newId(),
               text: item.text,
               time: item.time,
+              endTime: item.endTime ?? null,
               completed: false,
               parentId: item.parentId ? (idMap.get(item.parentId) ?? null) : null,
               order: base + i,
@@ -347,6 +348,7 @@ export const useTodoStore = create<TodoState>()(
           const items = todos.map((t) => ({
             text: t.text,
             time: t.time,
+            endTime: t.endTime ?? null,
             parentId: t.parentId ? (idToTemp.get(t.parentId) ?? null) : null,
             tempId: idToTemp.get(t.id),
             order: t.order,

@@ -196,6 +196,25 @@ describe('템플릿 저장 → 적용 (부모-자식 id 재구성)', () => {
     expect(child.time).toBe(540);
   });
 
+  it('시간범위(endTime)도 템플릿 왕복에서 보존된다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [mk({ id: 'r', text: '카공', time: 840, endTime: 960, order: 0 })],
+        tomorrow: [],
+      },
+      templates: [],
+    });
+    store().saveAsTemplate('today', '범위 루틴');
+    const tplId = useTodoStore.getState().templates[0].id;
+
+    store().clearDay('today');
+    store().applyTemplate('today', tplId);
+
+    const applied = useTodoStore.getState().days.today[0];
+    expect(applied.time).toBe(840);
+    expect(applied.endTime).toBe(960);
+  });
+
   it('applyTemplate은 기존 목록을 지우지 않고 뒤에 이어붙인다', () => {
     useTodoStore.setState({
       days: { today: [mk({ id: 'x', text: '기존', order: 0 })], tomorrow: [] },

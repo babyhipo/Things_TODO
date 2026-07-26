@@ -17,6 +17,7 @@ export interface Template {
   items: Array<{
     text: string;
     time: number | null;
+    endTime?: number | null;
     parentId: string | null;
     tempId?: string;
     order: number;
