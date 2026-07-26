@@ -106,7 +106,7 @@ function TemplatePanelContent({ onClose, embedded }: { onClose?: () => void; emb
   const saveAsTemplate = useTodoStore((s) => s.saveAsTemplate);
   const deleteTemplate = useTodoStore((s) => s.deleteTemplate);
   const reorderTemplates = useTodoStore((s) => s.reorderTemplates);
-  const titleId = useId(); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const titleId = useId();
 
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
 

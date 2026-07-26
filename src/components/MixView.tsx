@@ -166,7 +166,8 @@ export function MixView({ day }: MixViewProps) {
   const toggleGap = (key: string) =>
     setExpandedGaps(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
 
@@ -432,7 +433,7 @@ export function MixView({ day }: MixViewProps) {
           return { id, centerY: rect ? rect.top + rect.height / 2 : 0 };
         }).sort((a, b) => a.centerY - b.centerY);
 
-        let newOrder: string[] = [];
+        const newOrder: string[] = [];
         let inserted = false;
         for (const p of positions) {
           if (!inserted && e.clientY < p.centerY) {

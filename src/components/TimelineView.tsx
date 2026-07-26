@@ -181,7 +181,8 @@ export function TimelineView({ day }: TimelineViewProps) {
   const toggleGap = (key: string) =>
     setExpandedGaps(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
 
@@ -452,7 +453,7 @@ export function TimelineView({ day }: TimelineViewProps) {
           return { id, centerY: rect ? rect.top + rect.height / 2 : 0 };
         }).sort((a, b) => a.centerY - b.centerY);
 
-        let newOrder: string[] = [];
+        const newOrder: string[] = [];
         let inserted = false;
         for (const p of positions) {
           if (!inserted && e.clientY < p.centerY) {
@@ -501,7 +502,7 @@ export function TimelineView({ day }: TimelineViewProps) {
       window.removeEventListener('pointercancel', onEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!subDrag, day, setParentId, setTodoTime]);
+  }, [!!subDrag, day, setParentId, reorderSubItems]);
 
   /* ── 드롭존 삽입 위치 계산 ── */
   const insertBeforeId = drag ? getInsertionBeforeId(drag.currentY, drag.anchors) : null;
