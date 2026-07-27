@@ -261,39 +261,81 @@ export function MixView({ day }: MixViewProps) {
               {isDragging
                 ? <div style={{ height: 0, overflow: 'visible' }}>{card}</div>
                 : card}
-              {!isDragging && displayChildren.map(child => (
-                <div
-                  key={child.id}
-                  data-sub-id={child.id}
-                  className={`${styles.subItem} ${child.completed ? styles.subItemDone : ''} ${subDrag?.todoId === child.id ? styles.subItemDragging : ''}`}
-                >
-                  <span className={styles.subItemArrow} aria-hidden="true">└</span>
-                  {/* 체크박스 (시간 바로 우측) */}
-                  <button
-                    type="button"
-                    className={`${styles.subItemCheckbox} ${child.completed ? styles.subItemCheckboxChecked : ''}`}
-                    onClick={() => toggleComplete(day, child.id)}
-                    aria-label={child.completed ? '완료 취소' : '완료 처리'}
-                    role="checkbox"
-                    aria-checked={child.completed}
+              {!isDragging && displayChildren.map(child => {
+                // 부모카드와 동일한 스와이프(왼쪽 삭제 / 오른쪽 내일 이동) 계산
+                const isSwipingSub  = swipe?.todoId === child.id && swipe.direction !== 'v';
+                const rawOffsetSub  = isSwipingSub ? swipe!.currentX - swipe!.startX : 0;
+                const swipeOffsetSub = Math.max(-80, Math.min(80, rawOffsetSub));
+                const deleteProgressSub = Math.min(1, -swipeOffsetSub / 72);
+                const moveProgressSub   = Math.min(1, swipeOffsetSub / 72);
+                return (
+                <div key={child.id} style={{ position: 'relative' }}>
+                  {isSwipingSub && swipeOffsetSub < -12 && (
+                    <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressSub }}>×</div>
+                  )}
+                  {isSwipingSub && swipeOffsetSub > 12 && day === 'today' && (
+                    <div className={styles.swipeMoveHint} style={{ opacity: moveProgressSub }}>→</div>
+                  )}
+                  <div
+                    data-sub-id={child.id}
+                    className={`${styles.subItem} ${child.completed ? styles.subItemDone : ''} ${subDrag?.todoId === child.id ? styles.subItemDragging : ''}`}
+                    onPointerDown={e => handleSwipeStart(e, child.id)}
+                    style={{
+                      transform: `translateX(${swipeOffsetSub}px)`,
+                      transition: isSwipingSub ? 'none' : 'transform 200ms ease',
+                    }}
                   >
-                    <span className={styles.subItemCheckboxInner} aria-hidden="true" />
-                  </button>
-                  <span className={`${styles.subItemText} ${child.completed ? styles.subItemTextDone : ''}`}>
-                    {child.text || '(내용 없음)'}
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.subItemHandle}
-                    onPointerDown={!child.completed ? (e => { e.stopPropagation(); handleSubDragStart(e, child); }) : undefined}
-                    aria-label="드래그로 이동"
-                    disabled={child.completed}
-                    style={{ touchAction: 'none' }}
-                  >
-                    <span className={styles.handleIcon} aria-hidden="true" />
-                  </button>
+                    <span className={styles.subItemArrow} aria-hidden="true">└</span>
+                    {/* 체크박스 (시간 바로 우측) */}
+                    <button
+                      type="button"
+                      className={`${styles.subItemCheckbox} ${child.completed ? styles.subItemCheckboxChecked : ''}`}
+                      onClick={() => toggleComplete(day, child.id)}
+                      aria-label={child.completed ? '완료 취소' : '완료 처리'}
+                      role="checkbox"
+                      aria-checked={child.completed}
+                    >
+                      <span className={styles.subItemCheckboxInner} aria-hidden="true" />
+                    </button>
+                    {/* 텍스트: 클릭 시 편집 (부모카드와 동일) */}
+                    {editingId === child.id ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        className={styles.editInput}
+                        value={editDraft}
+                        onChange={e => setEditDraft(e.target.value)}
+                        onPointerDown={e => e.stopPropagation()}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') { e.preventDefault(); commitEdit(child.id); }
+                          if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                        }}
+                        onBlur={() => commitEdit(child.id)}
+                        autoComplete="off"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className={`${styles.subItemText} ${child.completed ? styles.subItemTextDone : ''}`}
+                        onClick={() => { if (!child.completed) beginEdit(child); }}
+                      >
+                        {child.text || '(내용 없음)'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className={styles.subItemHandle}
+                      onPointerDown={!child.completed ? (e => { e.stopPropagation(); handleSubDragStart(e, child); }) : undefined}
+                      aria-label="드래그로 이동"
+                      disabled={child.completed}
+                      style={{ touchAction: 'none' }}
+                    >
+                      <span className={styles.handleIcon} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           );
         })}
