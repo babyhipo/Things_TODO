@@ -38,6 +38,14 @@ describe('addTodo — 일정 추가', () => {
     store().addTodo('today', '2시 회의', 'pm');
     expect(useTodoStore.getState().days.today[0].time).toBe(840);
   });
+
+  it('시간 미지정 일정은 입력 순서대로 위→아래(order 오름차순)로 쌓인다', () => {
+    store().addTodo('today', '장보기');
+    store().addTodo('today', '빨래');
+    store().addTodo('today', '설거지');
+    const byOrder = [...useTodoStore.getState().days.today].sort((a, b) => a.order - b.order);
+    expect(byOrder.map((t) => t.text)).toEqual(['장보기', '빨래', '설거지']);
+  });
 });
 
 describe('toggleComplete — 완료 토글', () => {

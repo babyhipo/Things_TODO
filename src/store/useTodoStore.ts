@@ -71,9 +71,11 @@ function roundToFive(n: number): number {
 }
 
 // 입력 순서대로 맨 끝에 append. 시간순 자동 정렬은 하지 않음.
+// 새 항목의 order를 항상 기존 최대치 다음(끝)으로 지정해야 densify 후에도 맨 뒤에 놓인다.
+// (order를 0으로 두면 기존 0번 항목과 동률이 되어 두 번째 자리로 끼어드는 버그가 있었음)
 function insertTodo(list: Todo[], newTodo: Todo): Todo[] {
   const sorted = [...list].sort((a, b) => a.order - b.order);
-  return densifyOrder([...sorted, newTodo]);
+  return densifyOrder([...sorted, { ...newTodo, order: sorted.length }]);
 }
 
 // ── Undo 히스토리 (메모리 전용, 미지속) ──────────────────────────────────────
