@@ -4,11 +4,14 @@
 
 ---
 
-## 2026-07-XX (템플릿 — 첫 세션 후 삭제)
-- **완료**: 무엇을 만들었나/고쳤나 (1-2줄)
-- **결정**: 이번 세션에서 확정한 것 (기술 선택, 방향 등)
-- **막힌 것**: 해결 못 한 문제, 보류한 것 (없으면 "없음")
-- **다음 할 일**: 다음 세션에서 첫 번째로 할 작업
+## 2026-07-27
+- **Done**: Lint cleanup + subDrag effect dep-array fix; template endTime save/restore (B-2, +test);
+  unified sub-item ordering to manual `order` across all 3 views (B-1); extracted shared view logic
+  into `useTimelineInteractions` hook (Stage B, ~380 dup lines removed). 70 tests green, browser-verified.
+- **Decided**: B-1 → manual order; B-2 → persist endTime. Keep MixView/TimelineView JSX separate; share
+  logic via hook, not by merging components.
+- **Blocked**: Stray `.claire/worktrees/…` dir pollutes `npm run lint` (not source, not in CI) — asked owner, pending.
+- **Next**: Confirm `.claire` cleanup; then start feature work (gamification / recurring routines per prd.md).
 
 ---
 
