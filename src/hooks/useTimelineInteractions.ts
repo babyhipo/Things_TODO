@@ -306,8 +306,12 @@ export function useTimelineInteractions(day: DayKey) {
           hapticDelete();
           deleteTodo(day, s.todoId);
         } else if (dx >= 72 && day === 'today') {
-          hapticDrop();
-          moveTodoToTomorrow(day, s.todoId);
+          // '내일로 미루기'는 미완료 카드만 (완료 카드는 오른쪽 스와이프해도 이동 안 함)
+          const target = useTodoStore.getState().days[day].find(t => t.id === s.todoId);
+          if (target && !target.completed) {
+            hapticDrop();
+            moveTodoToTomorrow(day, s.todoId);
+          }
         }
       }
       setSwipe(null);

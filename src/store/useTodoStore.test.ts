@@ -134,6 +134,20 @@ describe('moveTodoToTomorrow — 내일로 넘기기', () => {
     expect(parent.completed).toBe(false); // 완료 초기화
     expect(child.parentId).toBe(parent.id); // 부모-자식 관계 유지
   });
+
+  it("내일로 미룰 때 동일한 시간대(time·endTime)를 그대로 유지한다", () => {
+    useTodoStore.setState({
+      days: {
+        today: [mk({ id: 'a', text: '카공', time: 840, endTime: 960, order: 0 })],
+        tomorrow: [],
+      },
+    });
+    store().moveTodoToTomorrow('today', 'a');
+    const s = useTodoStore.getState();
+    expect(s.days.today).toHaveLength(0);
+    expect(s.days.tomorrow).toHaveLength(1);
+    expect(s.days.tomorrow[0]).toMatchObject({ text: '카공', time: 840, endTime: 960 });
+  });
 });
 
 describe('indentTodo / outdentTodo — 하위/상위 이동', () => {

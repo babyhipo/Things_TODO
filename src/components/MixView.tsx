@@ -143,7 +143,7 @@ export function MixView({ day }: MixViewProps) {
                 <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgress }}>×</div>
               )}
               {/* 스와이프 내일 이동 힌트 (오른쪽) — 오늘 탭만 */}
-              {isSwipingThis && swipeOffset > 12 && day === 'today' && (
+              {isSwipingThis && swipeOffset > 12 && day === 'today' && !todo.completed && (
                 <div className={styles.swipeMoveHint} style={{ opacity: moveProgress }}>→</div>
               )}
 
@@ -273,7 +273,7 @@ export function MixView({ day }: MixViewProps) {
                   {isSwipingSub && swipeOffsetSub < -12 && (
                     <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressSub }}>×</div>
                   )}
-                  {isSwipingSub && swipeOffsetSub > 12 && day === 'today' && (
+                  {isSwipingSub && swipeOffsetSub > 12 && day === 'today' && !child.completed && (
                     <div className={styles.swipeMoveHint} style={{ opacity: moveProgressSub }}>→</div>
                   )}
                   <div
@@ -398,7 +398,7 @@ export function MixView({ day }: MixViewProps) {
                   {isSwipingU && swipeOffsetU < -12 && (
                     <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressU }}>×</div>
                   )}
-                  {isSwipingU && swipeOffsetU > 12 && day === 'today' && (
+                  {isSwipingU && swipeOffsetU > 12 && day === 'today' && !todo.completed && (
                     <div className={styles.swipeMoveHint} style={{ opacity: moveProgressU }}>→</div>
                   )}
                   <div
