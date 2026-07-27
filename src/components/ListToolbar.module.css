@@ -19,7 +19,7 @@
   width: 30px;
   height: 30px;
   border-radius: var(--radius-sm, 4px);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
   transition: transform 150ms ease;
 }
@@ -62,7 +62,7 @@
 }
 
 .clearBtn {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--color-text-muted);
   padding: 3px 8px;
@@ -81,7 +81,7 @@
 }
 
 .dedupBtn {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--color-text-muted);
   padding: 3px 8px;

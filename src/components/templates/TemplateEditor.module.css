@@ -96,7 +96,7 @@
 
 .sectionLabel {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -172,7 +172,7 @@
 
 .timeBadge {
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-accent);
   font-variant-numeric: tabular-nums;
@@ -184,7 +184,7 @@
 .itemText {
   flex: 1 1 auto;
   text-align: left;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
   padding: 4px 0;
@@ -199,7 +199,7 @@
 
 .itemEditInput {
   flex: 1 1 auto;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--color-text);
   padding: 4px 0;
@@ -215,7 +215,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 22px;
   color: var(--color-text-muted);
   border-radius: var(--radius-sm, 4px);
   opacity: 0;
@@ -271,7 +271,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 24px;
   background-color: var(--color-line);
   border-radius: var(--radius-md, 8px);
   transition: opacity 120ms, background-color 120ms, color 120ms;

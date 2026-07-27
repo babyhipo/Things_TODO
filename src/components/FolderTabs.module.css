@@ -46,12 +46,12 @@
 }
 
 .tabActive .label {
-  font-size: 18px;
+  font-size: 20px;
   color: #FFFFFF;
 }
 
 .tabInactive .label {
-  font-size: 13.5px;
+  font-size: 15px;
   color: var(--color-accent);
 }
 
@@ -63,12 +63,12 @@
 }
 
 .tabActive .date {
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.75);
 }
 
 .tabInactive .date {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-accent);
   opacity: 0.6;
 }
