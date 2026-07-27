@@ -423,9 +423,31 @@ export function MixView({ day }: MixViewProps) {
                                  backgroundColor: todo.completed ? '#9CA3AF' : undefined }} />
                     </button>
 
-                    <span className={`${styles.unscheduledText} ${todo.completed ? styles.unscheduledTextDone : ''}`}>
-                      {todo.text}
-                    </span>
+                    {/* 텍스트: 클릭 시 편집 (다른 카드와 동일) */}
+                    {editingId === todo.id ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        className={styles.editInput}
+                        value={editDraft}
+                        onChange={e => setEditDraft(e.target.value)}
+                        onPointerDown={e => e.stopPropagation()}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') { e.preventDefault(); commitEdit(todo.id); }
+                          if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                        }}
+                        onBlur={() => commitEdit(todo.id)}
+                        autoComplete="off"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className={`${styles.unscheduledText} ${todo.completed ? styles.unscheduledTextDone : ''}`}
+                        onClick={() => { if (!todo.completed) beginEdit(todo); }}
+                      >
+                        {todo.text || <span className={styles.noText}>(내용 없음)</span>}
+                      </button>
+                    )}
 
                     {/* 그립 (오른쪽, 2선) */}
                     {!todo.completed && (

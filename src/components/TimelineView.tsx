@@ -445,7 +445,31 @@ export function TimelineView({ day }: TimelineViewProps) {
                         </svg>
                       )}
                     </button>
-                    <span className={styles.unscheduledText}>{todo.text}</span>
+                    {/* 텍스트: 클릭 시 편집 (다른 카드와 동일) */}
+                    {editingId === todo.id ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        className={styles.editInput}
+                        value={editDraft}
+                        onChange={e => setEditDraft(e.target.value)}
+                        onPointerDown={e => e.stopPropagation()}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') { e.preventDefault(); commitEdit(todo.id); }
+                          if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                        }}
+                        onBlur={() => commitEdit(todo.id)}
+                        autoComplete="off"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.unscheduledText}
+                        onClick={() => { if (!todo.completed) beginEdit(todo); }}
+                      >
+                        {todo.text || <span className={styles.noText}>(내용 없음)</span>}
+                      </button>
+                    )}
                     {!todo.completed && (
                       <button
                         type="button"

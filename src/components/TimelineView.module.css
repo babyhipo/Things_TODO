@@ -780,6 +780,7 @@
   min-width: 0;
   word-break: break-word;
   line-height: 1.3;
+  text-align: left;
 }
 
 .unscheduledItemDone .unscheduledText {

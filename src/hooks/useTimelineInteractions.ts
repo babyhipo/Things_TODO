@@ -356,12 +356,29 @@ export function useTimelineInteractions(day: DayKey) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!drag, day, setTodoTime]);
 
-  // ── 언스케줄 드래그 이동·종료 (시간 부여) ──
+  // ── 언스케줄 드래그 이동·종료 (카드 위 → 하위일정 편입 / 빈 타임라인 → 시간 부여) ──
   useEffect(() => {
     if (!unscheduledDrag) return;
     const onMove = (e: PointerEvent) => {
       const ds = unscheduledDragRef.current;
-      if (ds) {
+      // 포인터 아래 루트 카드 감지 (그 카드의 하위일정으로 편입할 대상)
+      let found: string | null = null;
+      for (const t of scheduled) {
+        const el = document.querySelector<HTMLElement>(`[data-todo-id="${t.id}"]`);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (e.clientY >= rect.top + rect.height * 0.2 && e.clientY <= rect.bottom - rect.height * 0.2) {
+          found = t.id;
+          break;
+        }
+      }
+      if (subDragParentTargetRef.current !== found) {
+        subDragParentTargetRef.current = found;
+        setSubDragParentTarget(found);
+        if (found) hapticReorder(ghostRef.current);
+      }
+      // 카드 위가 아닐 때만 시간 스냅 햅틱
+      if (ds && !found) {
         const overTl = e.clientY >= ds.timelineTop && e.clientY <= ds.timelineBottom;
         if (overTl) {
           const newSnap = calcTimeFromY(e.clientY, ds.anchors, ds.timelineTop, ds.timelineBottom);
@@ -386,12 +403,21 @@ export function useTimelineInteractions(day: DayKey) {
     const onEnd = () => {
       const ds = unscheduledDragRef.current;
       if (!ds) return;
-      const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
-      if (overTl) {
-        hapticDrop(pillRef.current);
-        const t = calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
-        setTodoTime(day, ds.todoId, fromVirt(t));
+      const target = subDragParentTargetRef.current;
+      if (target) {
+        // 카드 위에 드롭 → 그 카드의 하위일정으로 편입
+        hapticDrop(ghostRef.current);
+        setParentId(day, ds.todoId, target);
+      } else {
+        const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
+        if (overTl) {
+          hapticDrop(pillRef.current);
+          const t = calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
+          setTodoTime(day, ds.todoId, fromVirt(t));
+        }
       }
+      subDragParentTargetRef.current = null;
+      setSubDragParentTarget(null);
       setUnscheduledDrag(null);
     };
     window.addEventListener('pointermove', onMove, { passive: true });
@@ -403,7 +429,7 @@ export function useTimelineInteractions(day: DayKey) {
       window.removeEventListener('pointercancel', onEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!unscheduledDrag, day, setTodoTime]);
+  }, [!!unscheduledDrag, day, setTodoTime, setParentId]);
 
   // ── 하위 일정 드래그: 부모 변경 or 형제 순서 변경 ──
   useEffect(() => {
@@ -498,10 +524,12 @@ export function useTimelineInteractions(day: DayKey) {
   // ── 드롭존 삽입 위치·파생값 ──
   const insertBeforeId = drag ? getInsertionBeforeId(drag.currentY, drag.anchors) : null;
 
-  const isOverTl = unscheduledDrag
-    ? unscheduledDrag.currentY >= unscheduledDrag.timelineTop
-      && unscheduledDrag.currentY <= unscheduledDrag.timelineBottom
-    : false;
+  // 언스케줄 드래그가 카드 위에 있으면(하위일정 편입 대상) 시간 배정 UI는 숨긴다
+  const unscheduledOverCard = !!unscheduledDrag && subDragParentTarget !== null;
+  const isOverTl = !!unscheduledDrag
+    && !unscheduledOverCard
+    && unscheduledDrag.currentY >= unscheduledDrag.timelineTop
+    && unscheduledDrag.currentY <= unscheduledDrag.timelineBottom;
   const unscheduledProposedTime = (unscheduledDrag && isOverTl)
     ? calcTimeFromY(unscheduledDrag.currentY, unscheduledDrag.anchors, unscheduledDrag.timelineTop, unscheduledDrag.timelineBottom)
     : null;
