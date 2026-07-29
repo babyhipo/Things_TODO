@@ -142,10 +142,6 @@ export function TimelineView({ day }: TimelineViewProps) {
             const deleteProgress = Math.min(1, -swipeOffset / 72);
             const moveProgress   = Math.min(1, swipeOffset / 72);
 
-            const isDragOutside = isDragging && drag
-              ? drag.currentY < drag.containerTop || drag.currentY > drag.containerBottom
-              : false;
-
             const card = (
               <div
                 data-todo-id={todo.id}
@@ -192,10 +188,10 @@ export function TimelineView({ day }: TimelineViewProps) {
 
                 {/* 카드 */}
                 <div
-                  className={`${styles.card} ${isDragging ? styles.cardDragging : ''} ${isDragOutside ? styles.cardDragOutside : ''} ${isSelected ? styles.cardSelected : ''} ${isSubDropTarget ? styles.cardSubDropTarget : ''}`}
+                  className={`${styles.card} ${isDragging ? styles.cardDragging : ''} ${isSelected ? styles.cardSelected : ''} ${isSubDropTarget ? styles.cardSubDropTarget : ''}`}
                   onPointerDown={e => handleSwipeStart(e, todo.id)}
                   style={{
-                    borderLeftColor: isDragOutside ? '#9CA3AF' : isDragging ? '#3B5BDB' : color,
+                    borderLeftColor: isDragging ? '#3B5BDB' : color,
                     transform: `translateX(${swipeOffset}px)`,
                     transition: isSwipingThis ? 'none' : 'transform 200ms ease, box-shadow 150ms, border-left-color 150ms',
                   }}

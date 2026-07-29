@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   snapTo,
   getInsertionBeforeId,
+  getInsertionBeforeIdByTime,
   eventColor,
   calcProposedTime,
   calcTimeFromY,
+  DRAG_PX_PER_STEP,
   type CardAnchor,
   type DragState,
 } from './timelineMath';
@@ -52,32 +54,48 @@ describe('eventColor — 상태별 색상', () => {
   });
 });
 
-describe('calcProposedTime — 두 카드 사이 시간 보간', () => {
-  it('중간에 놓으면 두 시간의 중간값', () => {
-    const anchors: CardAnchor[] = [
-      { todoId: 'a', time: 480, centerY: 100 },
-      { todoId: 'b', time: 600, centerY: 300 },
-    ];
-    const ds: DragState = {
-      todoId: 'x',
-      originalTime: 999,
-      initialCardCenterY: 0,
-      cardHeight: 0,
-      currentY: 200, // 정확히 가운데
-      anchors,
-      containerTop: 0,
-      containerBottom: 400,
-      containerLeft: 0,
-    };
-    expect(calcProposedTime(ds)).toBe(540); // (480~600 사이, 가운데)
+describe('calcProposedTime — 고정 감도(드래그 거리 비례)', () => {
+  const base = (over: Partial<DragState>): DragState => ({
+    todoId: 'x', originalTime: 480, startY: 100, initialCardCenterY: 100, cardHeight: 0,
+    currentY: 100, anchors: [], containerTop: 0, containerBottom: 2000, containerLeft: 0,
+    ...over,
   });
 
-  it('앵커가 없으면 원래 시간을 유지', () => {
-    const ds: DragState = {
-      todoId: 'x', originalTime: 720, initialCardCenterY: 0, cardHeight: 0,
-      currentY: 100, anchors: [], containerTop: 0, containerBottom: 400, containerLeft: 0,
-    };
-    expect(calcProposedTime(ds)).toBe(720);
+  it('움직임이 없으면 원래 시간 유지', () => {
+    expect(calcProposedTime(base({ currentY: 100 }))).toBe(480);
+  });
+  it(`아래로 ${DRAG_PX_PER_STEP * 3}px 끌면 +15분`, () => {
+    expect(calcProposedTime(base({ currentY: 100 + DRAG_PX_PER_STEP * 3 }))).toBe(495);
+  });
+  it('위로 22px 끌면 -10분(2칸 반올림)', () => {
+    expect(calcProposedTime(base({ currentY: 78 }))).toBe(470);
+  });
+  it('카드 간격·앵커와 무관하게 동일 감도', () => {
+    // 앵커가 있어도 결과는 드래그 거리에만 의존
+    const anchors: CardAnchor[] = [
+      { todoId: 'a', time: 480, centerY: 100 },
+      { todoId: 'b', time: 1200, centerY: 130 },
+    ];
+    expect(calcProposedTime(base({ currentY: 120, anchors }))).toBe(490); // 20px → +10분
+  });
+  it('하루 범위(새벽 4시=240분)로 클램프', () => {
+    expect(calcProposedTime(base({ originalTime: 260, currentY: 100 - DRAG_PX_PER_STEP * 20 }))).toBe(240);
+  });
+});
+
+describe('getInsertionBeforeIdByTime — 제안 시간 기준 삽입 위치', () => {
+  const anchors: CardAnchor[] = [
+    { todoId: 'a', time: 480, centerY: 100 },
+    { todoId: 'b', time: 600, centerY: 200 },
+  ];
+  it('두 카드 시간 사이면 뒤 카드 앞', () => {
+    expect(getInsertionBeforeIdByTime(540, anchors)).toBe('b');
+  });
+  it('가장 이른 시간보다 앞서면 첫 카드 앞', () => {
+    expect(getInsertionBeforeIdByTime(400, anchors)).toBe('a');
+  });
+  it('가장 늦은 시간보다 뒤면 null(맨 뒤)', () => {
+    expect(getInsertionBeforeIdByTime(700, anchors)).toBeNull();
   });
 });
 

@@ -14,6 +14,7 @@ import {
   calcTimeFromY,
   calcProposedTime,
   getInsertionBeforeId,
+  getInsertionBeforeIdByTime,
   type CardAnchor,
   type DragState,
   type SwipeState,
@@ -196,6 +197,7 @@ export function useTimelineInteractions(day: DayKey) {
     const ds: DragState = {
       todoId: todo.id,
       originalTime: toVirt(todo.time!),
+      startY: e.clientY,
       initialCardCenterY: er ? er.top + er.height / 2 : e.clientY,
       cardHeight: er ? er.height + 8 : 44, // +8 = margin-bottom
       currentY: e.clientY,
@@ -344,9 +346,9 @@ export function useTimelineInteractions(day: DayKey) {
     const onEnd = () => {
       const ds = dragRef.current;
       if (!ds) return;
-      const isOutside = ds.currentY < ds.containerTop || ds.currentY > ds.containerBottom;
+      // 고정 감도: 드래그 거리로 정해진 시간을 그대로 적용 (밖으로 끌어 해제하던 동작은 제거)
       hapticDrop(pillRef.current);
-      setTodoTime(day, ds.todoId, isOutside ? null : fromVirt(calcProposedTime(ds)));
+      setTodoTime(day, ds.todoId, fromVirt(calcProposedTime(ds)));
       setDrag(null);
     };
     window.addEventListener('pointermove', onMove, { passive: true });
@@ -526,7 +528,8 @@ export function useTimelineInteractions(day: DayKey) {
   }, [!!subDrag, day, setParentId, reorderSubItems]);
 
   // ── 드롭존 삽입 위치·파생값 ──
-  const insertBeforeId = drag ? getInsertionBeforeId(drag.currentY, drag.anchors) : null;
+  // 고정 감도에서는 포인터 위치가 아니라 "제안된 시간" 기준으로 삽입 위치를 잡아야 일관됨
+  const insertBeforeId = drag ? getInsertionBeforeIdByTime(calcProposedTime(drag), drag.anchors) : null;
 
   // 언스케줄 드래그가 카드 위에 있으면(하위일정 편입 대상) 시간 배정 UI는 숨긴다
   const unscheduledOverCard = !!unscheduledDrag && subDragParentTarget !== null;

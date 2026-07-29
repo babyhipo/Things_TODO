@@ -118,9 +118,6 @@ export function MixView({ day }: MixViewProps) {
           const translateY  = isDragging && drag
             ? drag.currentY - drag.initialCardCenterY
             : 0;
-          const isDragOutside = isDragging && drag
-            ? drag.currentY < drag.containerTop || drag.currentY > drag.containerBottom
-            : false;
 
           const isSwipingThis  = swipe?.todoId === todo.id && swipe.direction !== 'v';
           const rawOffset      = isSwipingThis ? swipe!.currentX - swipe!.startX : 0;
@@ -149,7 +146,7 @@ export function MixView({ day }: MixViewProps) {
 
               {/* 카드: 시간 레이블 포함 */}
               <div
-                className={`${styles.card} ${isDragging ? styles.cardDragging : ''} ${isDragOutside ? styles.cardDragOutside : ''} ${todo.endTime != null ? styles.cardRange : ''} ${isSelected ? styles.cardSelected : ''} ${isSubDropTarget ? styles.cardSubDropTarget : ''}`}
+                className={`${styles.card} ${isDragging ? styles.cardDragging : ''} ${todo.endTime != null ? styles.cardRange : ''} ${isSelected ? styles.cardSelected : ''} ${isSubDropTarget ? styles.cardSubDropTarget : ''}`}
                 onPointerDown={e => handleSwipeStart(e, todo.id)}
                 style={{
                   transform: `translateX(${swipeOffset}px)`,

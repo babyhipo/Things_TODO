@@ -13,6 +13,7 @@ export interface CardAnchor {
 export interface DragState {
   todoId: string;
   originalTime: number;
+  startY: number; // 드래그 시작 시 포인터 Y (고정 감도 계산 기준)
   initialCardCenterY: number;
   cardHeight: number; // 카드 높이 + margin (드롭존 크기로 사용)
   currentY: number;
@@ -62,6 +63,7 @@ export type Segment =
 
 // ── 상수 ────────────────────────────────────────────────────
 export const SNAP = 5; // 시간 스냅 단위(분)
+export const DRAG_PX_PER_STEP = 10; // 고정 감도: 5분 한 칸 이동에 필요한 드래그 픽셀
 
 export const SECTION_MARKS = [
   { virtMin: 12 * 60, label: '오후', key: 'section-pm' },
@@ -108,43 +110,32 @@ export function calcTimeFromY(
   return snapTo(DAY_START_MIN + 480); // fallback: 12:00
 }
 
-/** 포인터 Y → 인접 두 카드 사이 시간 범위만 보간 */
+/**
+ * 고정 감도: 드래그 시작점(startY)에서 끌어올린/내린 거리에 비례해 시간을 바꾼다.
+ * 카드 간격·위치와 무관하게 항상 같은 감도(DRAG_PX_PER_STEP px당 5분) → 미세 조절이 쉽다.
+ * 반환값은 가상 시간(virtual minutes), 하루 범위(새벽4시~다음날새벽3시59분)로 클램프.
+ */
 export function calcProposedTime(ds: DragState): number {
-  const { currentY, anchors, originalTime, containerTop, containerBottom } = ds;
-  const sorted = [...anchors].sort((a, b) => a.centerY - b.centerY);
-  if (sorted.length === 0) return originalTime;
-
-  const first = sorted[0];
-  const last = sorted[sorted.length - 1];
-
-  if (currentY <= first.centerY) {
-    const t = Math.max(0, (currentY - containerTop) / Math.max(1, first.centerY - containerTop));
-    return snapTo(Math.max(0, Math.round(t * Math.max(0, first.time - SNAP))));
-  }
-  if (currentY >= last.centerY) {
-    const t = Math.min(1, (currentY - last.centerY) / Math.max(1, containerBottom - last.centerY));
-    const minT = last.time + SNAP;
-    return snapTo(Math.max(minT, Math.min(1679, minT + Math.round(t * (1679 - minT)))));
-  }
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const above = sorted[i];
-    const below = sorted[i + 1];
-    if (currentY >= above.centerY && currentY < below.centerY) {
-      const minT = above.time + SNAP;
-      const maxT = below.time - SNAP;
-      if (minT > maxT) return snapTo(above.time + Math.round((below.time - above.time) / 2));
-      const t = (currentY - above.centerY) / (below.centerY - above.centerY);
-      return snapTo(Math.max(minT, Math.min(maxT, minT + t * (maxT - minT))));
-    }
-  }
-  return originalTime;
+  const { currentY, startY, originalTime } = ds;
+  const steps = Math.round((currentY - startY) / DRAG_PX_PER_STEP);
+  const proposed = originalTime + steps * SNAP;
+  return Math.max(DAY_START_MIN, Math.min(1679, proposed));
 }
 
-/** 드롭존이 어떤 카드 "바로 앞"에 삽입되는지 todoId 반환 (null이면 맨 뒤) */
+/** 드롭존이 어떤 카드 "바로 앞"에 삽입되는지 todoId 반환 (포인터 위치 기준, null이면 맨 뒤) */
 export function getInsertionBeforeId(currentY: number, anchors: CardAnchor[]): string | null {
   const sorted = [...anchors].sort((a, b) => a.centerY - b.centerY);
   for (const anchor of sorted) {
     if (currentY < anchor.centerY) return anchor.todoId;
+  }
+  return null;
+}
+
+/** 드롭존이 어떤 카드 "바로 앞"에 삽입되는지 todoId 반환 (제안 시간 기준, null이면 맨 뒤) */
+export function getInsertionBeforeIdByTime(proposedTime: number, anchors: CardAnchor[]): string | null {
+  const sorted = [...anchors].sort((a, b) => a.time - b.time);
+  for (const anchor of sorted) {
+    if (proposedTime < anchor.time) return anchor.todoId;
   }
   return null;
 }
