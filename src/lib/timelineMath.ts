@@ -63,7 +63,11 @@ export type Segment =
 
 // ── 상수 ────────────────────────────────────────────────────
 export const SNAP = 5; // 시간 스냅 단위(분)
-export const DRAG_PX_PER_STEP = 10; // 고정 감도: 5분 한 칸 이동에 필요한 드래그 픽셀
+// 가속 감도: 시작점에서 가까울수록 미세(분), 멀수록 빠르게(시간).
+//   분 = DRAG_BASE_MIN_PER_PX·dy + DRAG_ACCEL·dy·|dy|
+// (감도 조절 지점: BASE를 키우면 근처가 더 민감, ACCEL을 키우면 멀리서 더 빠르게)
+export const DRAG_BASE_MIN_PER_PX = 0.7; // 시작점 부근 감도 (분/px)
+export const DRAG_ACCEL = 0.003;         // 거리 제곱 가속 계수
 
 export const SECTION_MARKS = [
   { virtMin: 12 * 60, label: '오후', key: 'section-pm' },
@@ -111,14 +115,16 @@ export function calcTimeFromY(
 }
 
 /**
- * 고정 감도: 드래그 시작점(startY)에서 끌어올린/내린 거리에 비례해 시간을 바꾼다.
- * 카드 간격·위치와 무관하게 항상 같은 감도(DRAG_PX_PER_STEP px당 5분) → 미세 조절이 쉽다.
- * 반환값은 가상 시간(virtual minutes), 하루 범위(새벽4시~다음날새벽3시59분)로 클램프.
+ * 가속 감도: 드래그 시작점(startY)에서 끌어올린/내린 거리에 따라 시간을 바꾼다.
+ * 시작점 부근은 미세(분 단위), 멀어질수록 빠르게(시간 단위) → 한 번의 드래그로
+ * 정밀 조정과 몇 시간 이동을 모두 처리. 카드 간격·위치와는 무관.
+ * 반환값은 가상 시간(virtual minutes), 하루 범위(새벽4시~다음날새벽3시59분)로 클램프, 5분 스냅.
  */
 export function calcProposedTime(ds: DragState): number {
   const { currentY, startY, originalTime } = ds;
-  const steps = Math.round((currentY - startY) / DRAG_PX_PER_STEP);
-  const proposed = originalTime + steps * SNAP;
+  const dy = currentY - startY;
+  const deltaMin = DRAG_BASE_MIN_PER_PX * dy + DRAG_ACCEL * dy * Math.abs(dy);
+  const proposed = snapTo(originalTime + deltaMin);
   return Math.max(DAY_START_MIN, Math.min(1679, proposed));
 }
 

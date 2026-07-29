@@ -6,7 +6,6 @@ import {
   eventColor,
   calcProposedTime,
   calcTimeFromY,
-  DRAG_PX_PER_STEP,
   type CardAnchor,
   type DragState,
 } from './timelineMath';
@@ -54,7 +53,7 @@ describe('eventColor — 상태별 색상', () => {
   });
 });
 
-describe('calcProposedTime — 고정 감도(드래그 거리 비례)', () => {
+describe('calcProposedTime — 가속 감도(가까울수록 미세, 멀수록 빠르게)', () => {
   const base = (over: Partial<DragState>): DragState => ({
     todoId: 'x', originalTime: 480, startY: 100, initialCardCenterY: 100, cardHeight: 0,
     currentY: 100, anchors: [], containerTop: 0, containerBottom: 2000, containerLeft: 0,
@@ -64,22 +63,31 @@ describe('calcProposedTime — 고정 감도(드래그 거리 비례)', () => {
   it('움직임이 없으면 원래 시간 유지', () => {
     expect(calcProposedTime(base({ currentY: 100 }))).toBe(480);
   });
-  it(`아래로 ${DRAG_PX_PER_STEP * 3}px 끌면 +15분`, () => {
-    expect(calcProposedTime(base({ currentY: 100 + DRAG_PX_PER_STEP * 3 }))).toBe(495);
+  it('시작점 부근은 미세 — 아래로 10px면 +5분', () => {
+    // 0.7*10 + 0.003*100 = 7.3 → snap → +5분
+    expect(calcProposedTime(base({ currentY: 110 }))).toBe(485);
   });
-  it('위로 22px 끌면 -10분(2칸 반올림)', () => {
-    expect(calcProposedTime(base({ currentY: 78 }))).toBe(470);
+  it('아래로 100px면 +100분(1시간40분) — 멀수록 빨라짐', () => {
+    // 0.7*100 + 0.003*100*100 = 100
+    expect(calcProposedTime(base({ currentY: 200 }))).toBe(580);
   });
-  it('카드 간격·앵커와 무관하게 동일 감도', () => {
-    // 앵커가 있어도 결과는 드래그 거리에만 의존
+  it('아래로 200px면 +260분(약 4시간20분)', () => {
+    // 0.7*200 + 0.003*200*200 = 140 + 120 = 260
+    expect(calcProposedTime(base({ currentY: 300 }))).toBe(740);
+  });
+  it('위로도 대칭 — 위로 100px면 -100분', () => {
+    expect(calcProposedTime(base({ currentY: 0 }))).toBe(380);
+  });
+  it('카드 간격·앵커와 무관하게 드래그 거리에만 의존', () => {
     const anchors: CardAnchor[] = [
       { todoId: 'a', time: 480, centerY: 100 },
       { todoId: 'b', time: 1200, centerY: 130 },
     ];
-    expect(calcProposedTime(base({ currentY: 120, anchors }))).toBe(490); // 20px → +10분
+    expect(calcProposedTime(base({ currentY: 200, anchors }))).toBe(580);
   });
   it('하루 범위(새벽 4시=240분)로 클램프', () => {
-    expect(calcProposedTime(base({ originalTime: 260, currentY: 100 - DRAG_PX_PER_STEP * 20 }))).toBe(240);
+    // 위로 300px: -(0.7*300 + 0.003*300*300)= -(210+270)= -480 → 260-480 클램프
+    expect(calcProposedTime(base({ originalTime: 260, currentY: -200 }))).toBe(240);
   });
 });
 
