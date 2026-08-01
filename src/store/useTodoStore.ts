@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Todo, Template, DayKey } from '../types/todo';
 import { parseTime } from '../lib/timeParser';
-import { getLogicalDate } from '../lib/dayBoundary';
+import { getLogicalDate, toVirt } from '../lib/dayBoundary';
 
 // 브라우저 localStorage 저장 키. 기존 사용자 데이터 호환을 위해 값 고정.
 const STORAGE_KEY = 'oneul-todo/v1';
@@ -41,6 +41,8 @@ interface TodoState {
   reorderTemplates: (newOrderIds: string[]) => void;
   createEmptyTemplate: () => string;
   setTodoTime: (day: DayKey, id: string, time: number | null) => void;
+  // 시간을 지정하면서 순서까지 함께 확정: beforeId 카드 "바로 앞"에 삽입(null이면 맨 뒤)
+  assignTimeAt: (day: DayKey, id: string, time: number, beforeId: string | null) => void;
   setParentId: (day: DayKey, id: string, parentId: string | null) => void;
   reorderSubItems: (day: DayKey, parentId: string, newOrderIds: string[]) => void;
 
@@ -395,6 +397,55 @@ export const useTodoStore = create<TodoState>()(
           },
           historyLength: _hist.length,
         }));
+      },
+
+      assignTimeAt: (day, id, time, beforeId) => {
+        pushHist(get().days);
+        set((state) => {
+          const list = state.days[day];
+          const moved = list.find((t) => t.id === id);
+          if (!moved) return {};
+
+          // 부모별 자식 묶음 (이동 카드 자신은 제외 → 시간 지정 시 루트로 승격)
+          const childrenByParent = new Map<string, Todo[]>();
+          list
+            .filter((t) => t.parentId && t.id !== id)
+            .forEach((c) => {
+              const arr = childrenByParent.get(c.parentId as string) ?? [];
+              arr.push(c);
+              childrenByParent.set(c.parentId as string, arr);
+            });
+
+          const movedNew: Todo = { ...moved, time, parentId: null };
+
+          // 이동 카드를 뺀 나머지 루트를 (시간, order)로 정렬
+          const NULL_LAST = 1_000_000;
+          const otherRoots = list
+            .filter((t) => !t.parentId && t.id !== id)
+            .slice()
+            .sort(
+              (a, b) =>
+                toVirt(a.time ?? NULL_LAST) - toVirt(b.time ?? NULL_LAST) || a.order - b.order,
+            );
+
+          // beforeId 바로 앞에 삽입 (없으면 맨 뒤)
+          const idx = beforeId ? otherRoots.findIndex((r) => r.id === beforeId) : -1;
+          const rootOrder = otherRoots.slice();
+          if (idx >= 0) rootOrder.splice(idx, 0, movedNew);
+          else rootOrder.push(movedNew);
+
+          // 루트 순서대로 order 재부여, 각 루트 뒤에 자식(상대 순서 유지)
+          const result: Todo[] = [];
+          for (const r of rootOrder) {
+            result.push({ ...r, order: result.length });
+            const kids = (childrenByParent.get(r.id) ?? [])
+              .slice()
+              .sort((a, b) => a.order - b.order);
+            for (const k of kids) result.push({ ...k, order: result.length });
+          }
+
+          return { days: { ...state.days, [day]: result }, historyLength: _hist.length };
+        });
       },
 
       setParentId: (day, id, parentId) => {

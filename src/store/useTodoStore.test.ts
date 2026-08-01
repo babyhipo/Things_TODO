@@ -94,6 +94,61 @@ describe('deduplicateDay — 중복 제거', () => {
   });
 });
 
+describe('assignTimeAt — 시간+순서 동시 확정', () => {
+  it('미지정 카드를 같은 시간 무리의 맨 아래로 넣는다 (beforeId=다음 시간 카드)', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: 'A', time: 720, order: 0 }), // 12:00
+          mk({ id: 'b', text: 'B', time: 720, order: 1 }), // 12:00
+          mk({ id: 'c', text: 'C', time: 900, order: 2 }), // 15:00
+          mk({ id: 'u', text: 'U', time: null, order: 3 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().assignTimeAt('today', 'u', 720, 'c'); // 12:00 무리 맨 뒤(=15:00 앞)
+    const list = useTodoStore.getState().days.today.slice().sort((x, y) => x.order - y.order);
+    expect(list.map((t) => t.text)).toEqual(['A', 'B', 'U', 'C']);
+    expect(list.find((t) => t.id === 'u')!.time).toBe(720);
+  });
+
+  it('같은 시간 무리 안 특정 위치에 재삽입한다 (C를 A 앞으로)', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: 'A', time: 720, order: 0 }),
+          mk({ id: 'b', text: 'B', time: 720, order: 1 }),
+          mk({ id: 'c', text: 'C', time: 720, order: 2 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().assignTimeAt('today', 'c', 720, 'a'); // C를 A 앞으로
+    const list = useTodoStore.getState().days.today.slice().sort((x, y) => x.order - y.order);
+    expect(list.map((t) => t.text)).toEqual(['C', 'A', 'B']);
+    expect(list.every((t) => t.time === 720)).toBe(true);
+  });
+
+  it('beforeId=null이면 맨 뒤에 배치하고 자식은 부모 뒤에 유지한다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'p', text: 'P', time: 480, order: 0 }),
+          mk({ id: 'k', text: 'K', parentId: 'p', time: null, order: 1 }),
+          mk({ id: 'u', text: 'U', time: null, order: 2 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().assignTimeAt('today', 'u', 600, null); // 맨 뒤
+    const list = useTodoStore.getState().days.today.slice().sort((x, y) => x.order - y.order);
+    expect(list.map((t) => t.text)).toEqual(['P', 'K', 'U']);
+    expect(list.find((t) => t.id === 'k')!.parentId).toBe('p'); // 부모-자식 유지
+    expect(list.find((t) => t.id === 'u')!.time).toBe(600);
+  });
+});
+
 describe('reorderTodos — 드래그 시 시간 자동 조정', () => {
   it('두 일정 사이로 옮기면 시간이 중간값으로 바뀐다 (8:00과 9:00 사이 → 8:30)', () => {
     useTodoStore.setState({

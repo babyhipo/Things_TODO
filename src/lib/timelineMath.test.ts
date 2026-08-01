@@ -6,6 +6,9 @@ import {
   eventColor,
   calcProposedTime,
   calcTimeFromY,
+  isReorderMode,
+  calcDragTime,
+  calcDragInsertBeforeId,
   type CardAnchor,
   type DragState,
 } from './timelineMath';
@@ -57,6 +60,7 @@ describe('calcProposedTime — 가속 감도(가까울수록 미세, 멀수록 �
   const base = (over: Partial<DragState>): DragState => ({
     todoId: 'x', originalTime: 480, startY: 100, initialCardCenterY: 100, cardHeight: 0,
     currentY: 100, anchors: [], containerTop: 0, containerBottom: 2000, containerLeft: 0,
+    hasSameTimeSiblings: false, bandTop: 0, bandBottom: 0,
     ...over,
   });
 
@@ -88,6 +92,39 @@ describe('calcProposedTime — 가속 감도(가까울수록 미세, 멀수록 �
   it('하루 범위(새벽 4시=240분)로 클램프', () => {
     // 위로 300px: -(0.7*300 + 0.003*300*300)= -(210+270)= -480 → 260-480 클램프
     expect(calcProposedTime(base({ originalTime: 260, currentY: -200 }))).toBe(240);
+  });
+});
+
+describe('같은 시간 재정렬 밴드 (calcDragTime / calcDragInsertBeforeId / isReorderMode)', () => {
+  // 같은 시간(720) 형제 b가 centerY 150에 있고, 밴드는 [80,200]
+  const base = (over: Partial<DragState>): DragState => ({
+    todoId: 'x', originalTime: 720, startY: 100, initialCardCenterY: 100, cardHeight: 44,
+    currentY: 100, anchors: [{ todoId: 'b', time: 720, centerY: 150 }],
+    containerTop: 0, containerBottom: 2000, containerLeft: 0,
+    hasSameTimeSiblings: true, bandTop: 80, bandBottom: 200,
+    ...over,
+  });
+
+  it('밴드 안 + 형제 있음 → 재정렬 모드: 시간은 원래대로 유지', () => {
+    const ds = base({ currentY: 160 });
+    expect(isReorderMode(ds)).toBe(true);
+    expect(calcDragTime(ds)).toBe(720); // 가속 안 함
+  });
+
+  it('재정렬 모드: 형제보다 위면 그 앞(b), 아래면 맨 뒤(null)', () => {
+    expect(calcDragInsertBeforeId(base({ currentY: 120 }))).toBe('b'); // b(150) 위
+    expect(calcDragInsertBeforeId(base({ currentY: 180 }))).toBeNull(); // b 아래 → 맨 뒤
+  });
+
+  it('밴드 밖 → 시간변경 모드: 가속 시간 적용', () => {
+    const ds = base({ currentY: 400 }); // bandBottom(200) 아래
+    expect(isReorderMode(ds)).toBe(false);
+    expect(calcDragTime(ds)).toBe(1200); // 720 + (0.7*300 + 0.003*90000)=480
+  });
+
+  it('같은 시간 형제가 없으면 밴드 안이라도 항상 시간변경 모드', () => {
+    const ds = base({ hasSameTimeSiblings: false, currentY: 160 });
+    expect(isReorderMode(ds)).toBe(false);
   });
 });
 

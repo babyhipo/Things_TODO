@@ -2,7 +2,7 @@ import styles from './MixView.module.css';
 import { formatTime } from '../lib/timeFormatter';
 import type { DayKey } from '../types/todo';
 import { toVirt } from '../lib/dayBoundary';
-import { calcProposedTime, eventColor } from '../lib/timelineMath';
+import { eventColor } from '../lib/timelineMath';
 import { useTimelineInteractions } from '../hooks/useTimelineInteractions';
 
 interface MixViewProps { day: DayKey; }
@@ -17,6 +17,7 @@ export function MixView({ day }: MixViewProps) {
     timelineRef, pillRef, ghostRef,
     handleDragStart, handleSwipeStart, handleSubDragStart, handleUnscheduledDragStart,
     isOverTl, unscheduledProposedTime, effectiveInsertBeforeId, showDropZone, dropZoneHeight,
+    dragProposedTime,
   } = useTimelineInteractions(day);
 
   let dropZoneRendered = false;
@@ -111,7 +112,7 @@ export function MixView({ day }: MixViewProps) {
           if (showDropZoneHere) dropZoneRendered = true;
 
           const virtTodoTime = toVirt(todo.time!);
-          const displayTime = isDragging ? calcProposedTime(drag!) : virtTodoTime;
+          const displayTime = isDragging ? dragProposedTime! : virtTodoTime;
           const isOverdue   = !todo.completed && todo.time !== null
                             && day === 'today' && virtTodoTime < now && !isDragging;
           const color = eventColor(todo.time, isOverdue, todo.completed, now, day);
@@ -346,7 +347,7 @@ export function MixView({ day }: MixViewProps) {
       {drag && (
         <div className={styles.floatingIndicator}
           style={{ top: drag.currentY, left: drag.containerLeft }}>
-          <div ref={pillRef} className={styles.floatingPill}>{formatTime(calcProposedTime(drag))}</div>
+          <div ref={pillRef} className={styles.floatingPill}>{formatTime(dragProposedTime ?? 0)}</div>
           <div className={styles.floatingLine} />
         </div>
       )}

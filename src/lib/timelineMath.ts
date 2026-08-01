@@ -21,6 +21,28 @@ export interface DragState {
   containerTop: number;
   containerBottom: number;
   containerLeft: number;
+  // 같은 시간 재정렬 밴드: 같은 시간 형제가 있고 포인터가 이 구간 안이면
+  // 시간은 고정하고 순서만 바꾼다(밖으로 나가면 가속 시간변경).
+  hasSameTimeSiblings: boolean;
+  bandTop: number;
+  bandBottom: number;
+}
+
+/** 지금 드래그가 '같은 시간 재정렬' 모드인지 (형제 있고 포인터가 밴드 안) */
+export function isReorderMode(ds: DragState): boolean {
+  return ds.hasSameTimeSiblings && ds.currentY >= ds.bandTop && ds.currentY <= ds.bandBottom;
+}
+
+/** 모드에 따른 제안 시간(가상분): 재정렬 모드면 원래 시간 유지, 아니면 가속 계산 */
+export function calcDragTime(ds: DragState): number {
+  return isReorderMode(ds) ? ds.originalTime : calcProposedTime(ds);
+}
+
+/** 모드에 따른 삽입 위치(어느 카드 앞): 재정렬=포인터Y 기준, 시간변경=제안시간 기준 */
+export function calcDragInsertBeforeId(ds: DragState): string | null {
+  return isReorderMode(ds)
+    ? getInsertionBeforeId(ds.currentY, ds.anchors)
+    : getInsertionBeforeIdByTime(calcProposedTime(ds), ds.anchors);
 }
 
 export interface SwipeState {
