@@ -107,7 +107,8 @@ export function useTimelineInteractions(day: DayKey) {
     });
     const roots = all.filter(t => !t.parentId);
     return {
-      scheduled:        roots.filter(t => t.time !== null).sort((a, b) => toVirt(a.time ?? 0) - toVirt(b.time ?? 0)),
+      // 시간 오름차순, 같은 시간이면 등록 순서(order) → 먼저 등록한 카드가 위
+      scheduled:        roots.filter(t => t.time !== null).sort((a, b) => toVirt(a.time ?? 0) - toVirt(b.time ?? 0) || a.order - b.order),
       unscheduled:      roots.filter(t => t.time === null).sort((a, b) => a.order - b.order),
       childrenByParent: childMap,
     };

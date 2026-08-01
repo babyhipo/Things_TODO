@@ -266,8 +266,13 @@ export const useTodoStore = create<TodoState>()(
 
           let newTime: number | null = moved.time;
           if (prevTime !== null && nextTime !== null) {
-            const mid = roundToFive((prevTime + nextTime) / 2);
-            newTime = mid === prevTime ? clampTime(prevTime + 5) : clampTime(mid);
+            if (prevTime === nextTime) {
+              // 같은 시간 사이에 놓으면 그 시간 그대로 유지 (같은 시간 여러 개 허용)
+              newTime = prevTime;
+            } else {
+              const mid = roundToFive((prevTime + nextTime) / 2);
+              newTime = mid === prevTime ? clampTime(prevTime + 5) : clampTime(mid);
+            }
           } else if (prevTime !== null) {
             newTime = clampTime(prevTime + 5);
           } else if (nextTime !== null) {

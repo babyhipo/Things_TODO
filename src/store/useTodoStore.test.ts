@@ -111,6 +111,24 @@ describe('reorderTodos — 드래그 시 시간 자동 조정', () => {
     const c = useTodoStore.getState().days.today.find((t) => t.id === 'c')!;
     expect(c.time).toBe(510); // (480 + 540) / 2 = 8:30
   });
+
+  it('같은 시간 카드들 사이로 옮기면 시간을 유지하고 순서만 바뀐다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: 'A', time: 720, order: 0 }), // 12:00
+          mk({ id: 'b', text: 'B', time: 720, order: 1 }), // 12:00
+          mk({ id: 'c', text: 'C', time: 720, order: 2 }), // 12:00
+        ],
+        tomorrow: [],
+      },
+    });
+    // C를 A와 B 사이로 이동 (같은 시간 유지)
+    store().reorderTodos('today', ['a', 'c', 'b'], 'c');
+    const list = useTodoStore.getState().days.today.slice().sort((x, y) => x.order - y.order);
+    expect(list.map((t) => t.text)).toEqual(['A', 'C', 'B']); // 순서만 변경
+    expect(list.every((t) => t.time === 720)).toBe(true);     // 시간은 12:00 유지
+  });
 });
 
 describe('moveTodoToTomorrow — 내일로 넘기기', () => {
