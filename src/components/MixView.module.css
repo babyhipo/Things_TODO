@@ -10,8 +10,8 @@
 /* ── 타임라인 ── */
 .timeline {
   position: relative;
-  padding: 0 16px;
-  /* ul.list와 동일한 좌우 패딩 → 체크박스 위치 일치 */
+  padding: 0 16px 0 8px;
+  /* 왼쪽 여백을 줄여 시간 열·체크박스·세로선을 전체적으로 왼쪽으로 */
 }
 
 /*
@@ -22,7 +22,7 @@
 .timeline::before {
   content: '';
   position: absolute;
-  left: 87px;
+  left: 75px;
   top: 0;
   bottom: 0;
   width: 2px;
@@ -58,7 +58,7 @@
 
 .sectionLabel {
   flex: 0 0 auto;
-  width: 50px; /* card padding(10) + timeLabel(40) */
+  width: 46px; /* card padding(10) + timeLabel(36) */
   text-align: right;
   font-size: 12px;
   font-weight: 600;
@@ -153,7 +153,7 @@
 /* ── 시간 레이블 래퍼 (목록뷰 .timeWrap과 동일) ── */
 .timeWrap {
   flex: 0 0 auto;
-  width: 40px;
+  width: 36px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -301,7 +301,7 @@
   padding: 5px 12px 5px 8px;
   margin-top: 2px;
   margin-bottom: 2px;
-  margin-left: 40px;
+  margin-left: 36px;
   background-color: #FFFFFF;
   border-radius: var(--radius-md, 8px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -592,7 +592,7 @@
 
 /* sectionLabel과 동일한 50px 컨테이너, 배지를 오른쪽 정렬 */
 .nowTimeArea {
-  flex: 0 0 50px;
+  flex: 0 0 46px;
   display: flex;
   justify-content: flex-end;
 }
@@ -626,7 +626,7 @@
 
 .gapLine {
   position: absolute;
-  left: 87px; /* 세로선과 동일 위치 */
+  left: 75px; /* 세로선과 동일 위치 */
   opacity: 0.4;
   top: 0;
   bottom: 0;
@@ -669,7 +669,7 @@
 }
 
 .emptyHourLabel {
-  width: 50px; /* card_pad(10) + timeLabel(40) */
+  width: 46px; /* card_pad(10) + timeLabel(36) */
   flex-shrink: 0;
   text-align: right;
   font-size: 12px;
