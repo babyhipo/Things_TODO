@@ -197,6 +197,14 @@ export function useTimelineInteractions(day: DayKey) {
         return [{ todoId: t.id, time: toVirt(t.time!), centerY: ar.top + ar.height / 2 }];
       });
 
+    // 현재시각 빨간 바(now 라인)를 시간 보간 waypoint로 (오늘 탭에만 있음)
+    let nowAnchor: CardAnchor | undefined;
+    const nowEl = timelineRef.current.querySelector<HTMLElement>('[data-now-line]');
+    if (nowEl) {
+      const nr = nowEl.getBoundingClientRect();
+      nowAnchor = { todoId: '__now__', time: now, centerY: nr.top + nr.height / 2 };
+    }
+
     const ds: DragState = {
       todoId: todo.id,
       initialCardCenterY: er ? er.top + er.height / 2 : e.clientY,
@@ -206,6 +214,7 @@ export function useTimelineInteractions(day: DayKey) {
       containerTop:    cr.top,
       containerBottom: cr.bottom,
       containerLeft:   cr.left,
+      nowAnchor,
     };
     hapticGrab(el ?? undefined);
     lastSnapRef.current = toVirt(todo.time!);

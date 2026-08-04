@@ -106,7 +106,7 @@ export function TimelineView({ day }: TimelineViewProps) {
             /* ── 현재 시간 인디케이터 ── */
             if (seg.type === 'now') {
               return (
-                <div key="now" className={styles.nowRow}>
+                <div key="now" data-now-line="" className={styles.nowRow}>
                   <div className={styles.nowBadge}>
                     <span className={styles.nowBadgeInner}>{formatTime(seg.time)}</span>
                   </div>

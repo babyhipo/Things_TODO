@@ -19,14 +19,19 @@ export interface DragState {
   containerTop: number;
   containerBottom: number;
   containerLeft: number;
+  // 현재시각 빨간 바(now 라인)도 시간 보간의 waypoint로 사용 (오늘 탭에만 존재).
+  // 삽입 순서 계산에는 쓰지 않고, 시간 보간에만 섞는다.
+  nowAnchor?: CardAnchor;
 }
 
 /**
  * 제안 시간(가상분): 포인터가 카드들 사이 어디에 있느냐로 정한다(카드 상대 위치 기준).
  * 손가락 위치 = 실제 배치 위치가 일치하도록. 같은 시간 카드 사이에 있으면 그 시간 유지.
+ * now 라인이 있으면 그것도 앵커로 섞어, 빨간 바 위치가 현재시각과 이어지게 한다.
  */
 export function calcDragTime(ds: DragState): number {
-  return calcTimeFromY(ds.currentY, ds.anchors, ds.containerTop, ds.containerBottom);
+  const anchors = ds.nowAnchor ? [...ds.anchors, ds.nowAnchor] : ds.anchors;
+  return calcTimeFromY(ds.currentY, anchors, ds.containerTop, ds.containerBottom);
 }
 
 /** 삽입 위치(어느 카드 앞): 포인터 Y 기준 (null이면 맨 뒤) */

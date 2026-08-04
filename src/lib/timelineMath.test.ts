@@ -83,6 +83,21 @@ describe('calcDragTime / calcDragInsertBeforeId — 카드 상대 위치 기준'
     expect(calcDragTime(base({ currentY: 150, anchors: same }))).toBe(720);
     expect(calcDragInsertBeforeId(base({ currentY: 150, anchors: same }))).toBe('b');
   });
+
+  it('now 라인도 앵커로 섞어 빨간 바 위치가 현재시각과 이어진다', () => {
+    // a(8:00, centerY100) — now(9:00=540, centerY150) — b(11:00=660, centerY200)
+    const ab: CardAnchor[] = [
+      { todoId: 'a', time: 480, centerY: 100 },
+      { todoId: 'b', time: 660, centerY: 200 },
+    ];
+    const nowAnchor: CardAnchor = { todoId: '__now__', time: 540, centerY: 150 };
+    // now 없이 y=150 → a·b만 보간 → 9:30(570)
+    expect(calcDragTime(base({ currentY: 150, anchors: ab }))).toBe(570);
+    // now 앵커 섞으면 빨간 바 위치(150)에서 현재시각(9:00) 부근으로 당겨짐
+    expect(calcDragTime(base({ currentY: 150, anchors: ab, nowAnchor }))).toBe(545);
+    // 삽입 순서는 now 무시(실제 카드 a/b 기준) — 150은 b(200) 위 → b 앞
+    expect(calcDragInsertBeforeId(base({ currentY: 150, anchors: ab, nowAnchor }))).toBe('b');
+  });
 });
 
 describe('getInsertionBeforeIdByTime — 제안 시간 기준 삽입 위치', () => {
