@@ -12,8 +12,6 @@ export interface CardAnchor {
 
 export interface DragState {
   todoId: string;
-  originalTime: number;
-  startY: number; // 드래그 시작 시 포인터 Y (고정 감도 계산 기준)
   initialCardCenterY: number;
   cardHeight: number; // 카드 높이 + margin (드롭존 크기로 사용)
   currentY: number;
@@ -21,28 +19,19 @@ export interface DragState {
   containerTop: number;
   containerBottom: number;
   containerLeft: number;
-  // 같은 시간 재정렬 밴드: 같은 시간 형제가 있고 포인터가 이 구간 안이면
-  // 시간은 고정하고 순서만 바꾼다(밖으로 나가면 가속 시간변경).
-  hasSameTimeSiblings: boolean;
-  bandTop: number;
-  bandBottom: number;
 }
 
-/** 지금 드래그가 '같은 시간 재정렬' 모드인지 (형제 있고 포인터가 밴드 안) */
-export function isReorderMode(ds: DragState): boolean {
-  return ds.hasSameTimeSiblings && ds.currentY >= ds.bandTop && ds.currentY <= ds.bandBottom;
-}
-
-/** 모드에 따른 제안 시간(가상분): 재정렬 모드면 원래 시간 유지, 아니면 가속 계산 */
+/**
+ * 제안 시간(가상분): 포인터가 카드들 사이 어디에 있느냐로 정한다(카드 상대 위치 기준).
+ * 손가락 위치 = 실제 배치 위치가 일치하도록. 같은 시간 카드 사이에 있으면 그 시간 유지.
+ */
 export function calcDragTime(ds: DragState): number {
-  return isReorderMode(ds) ? ds.originalTime : calcProposedTime(ds);
+  return calcTimeFromY(ds.currentY, ds.anchors, ds.containerTop, ds.containerBottom);
 }
 
-/** 모드에 따른 삽입 위치(어느 카드 앞): 재정렬=포인터Y 기준, 시간변경=제안시간 기준 */
+/** 삽입 위치(어느 카드 앞): 포인터 Y 기준 (null이면 맨 뒤) */
 export function calcDragInsertBeforeId(ds: DragState): string | null {
-  return isReorderMode(ds)
-    ? getInsertionBeforeId(ds.currentY, ds.anchors)
-    : getInsertionBeforeIdByTime(calcProposedTime(ds), ds.anchors);
+  return getInsertionBeforeId(ds.currentY, ds.anchors);
 }
 
 export interface SwipeState {
@@ -85,11 +74,6 @@ export type Segment =
 
 // ── 상수 ────────────────────────────────────────────────────
 export const SNAP = 5; // 시간 스냅 단위(분)
-// 가속 감도: 시작점에서 가까울수록 미세(분), 멀수록 빠르게(시간).
-//   분 = DRAG_BASE_MIN_PER_PX·dy + DRAG_ACCEL·dy·|dy|
-// (감도 조절 지점: BASE를 키우면 근처가 더 민감, ACCEL을 키우면 멀리서 더 빠르게)
-export const DRAG_BASE_MIN_PER_PX = 0.7; // 시작점 부근 감도 (분/px)
-export const DRAG_ACCEL = 0.003;         // 거리 제곱 가속 계수
 
 export const SECTION_MARKS = [
   { virtMin: 12 * 60, label: '오후', key: 'section-pm' },
@@ -134,20 +118,6 @@ export function calcTimeFromY(
     }
   }
   return snapTo(DAY_START_MIN + 480); // fallback: 12:00
-}
-
-/**
- * 가속 감도: 드래그 시작점(startY)에서 끌어올린/내린 거리에 따라 시간을 바꾼다.
- * 시작점 부근은 미세(분 단위), 멀어질수록 빠르게(시간 단위) → 한 번의 드래그로
- * 정밀 조정과 몇 시간 이동을 모두 처리. 카드 간격·위치와는 무관.
- * 반환값은 가상 시간(virtual minutes), 하루 범위(새벽4시~다음날새벽3시59분)로 클램프, 5분 스냅.
- */
-export function calcProposedTime(ds: DragState): number {
-  const { currentY, startY, originalTime } = ds;
-  const dy = currentY - startY;
-  const deltaMin = DRAG_BASE_MIN_PER_PX * dy + DRAG_ACCEL * dy * Math.abs(dy);
-  const proposed = snapTo(originalTime + deltaMin);
-  return Math.max(DAY_START_MIN, Math.min(1679, proposed));
 }
 
 /** 드롭존이 어떤 카드 "바로 앞"에 삽입되는지 todoId 반환 (포인터 위치 기준, null이면 맨 뒤) */

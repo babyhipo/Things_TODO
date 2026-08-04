@@ -4,9 +4,7 @@ import {
   getInsertionBeforeId,
   getInsertionBeforeIdByTime,
   eventColor,
-  calcProposedTime,
   calcTimeFromY,
-  isReorderMode,
   calcDragTime,
   calcDragInsertBeforeId,
   type CardAnchor,
@@ -56,75 +54,34 @@ describe('eventColor — 상태별 색상', () => {
   });
 });
 
-describe('calcProposedTime — 가속 감도(가까울수록 미세, 멀수록 빠르게)', () => {
+describe('calcDragTime / calcDragInsertBeforeId — 카드 상대 위치 기준', () => {
+  // 카드 a(8:00, centerY 100), b(10:00, centerY 200)
+  const anchors: CardAnchor[] = [
+    { todoId: 'a', time: 480, centerY: 100 },
+    { todoId: 'b', time: 600, centerY: 200 },
+  ];
   const base = (over: Partial<DragState>): DragState => ({
-    todoId: 'x', originalTime: 480, startY: 100, initialCardCenterY: 100, cardHeight: 0,
-    currentY: 100, anchors: [], containerTop: 0, containerBottom: 2000, containerLeft: 0,
-    hasSameTimeSiblings: false, bandTop: 0, bandBottom: 0,
+    todoId: 'x', initialCardCenterY: 150, cardHeight: 44,
+    currentY: 150, anchors, containerTop: 0, containerBottom: 2000, containerLeft: 0,
     ...over,
   });
 
-  it('움직임이 없으면 원래 시간 유지', () => {
-    expect(calcProposedTime(base({ currentY: 100 }))).toBe(480);
+  it('두 카드 사이 정중앙이면 그 사이 시간(=9:00)', () => {
+    // a(480)~b(600) 사이 centerY 150 → 정중앙 → 540
+    expect(calcDragTime(base({ currentY: 150 }))).toBe(540);
   });
-  it('시작점 부근은 미세 — 아래로 10px면 +5분', () => {
-    // 0.7*10 + 0.003*100 = 7.3 → snap → +5분
-    expect(calcProposedTime(base({ currentY: 110 }))).toBe(485);
+  it('포인터 위치가 곧 삽입 위치 (a 위=a앞, 사이=b앞, b 아래=맨뒤)', () => {
+    expect(calcDragInsertBeforeId(base({ currentY: 50 }))).toBe('a');  // a(100) 위
+    expect(calcDragInsertBeforeId(base({ currentY: 150 }))).toBe('b'); // a~b 사이
+    expect(calcDragInsertBeforeId(base({ currentY: 300 }))).toBeNull(); // b 아래 → 맨 뒤
   });
-  it('아래로 100px면 +100분(1시간40분) — 멀수록 빨라짐', () => {
-    // 0.7*100 + 0.003*100*100 = 100
-    expect(calcProposedTime(base({ currentY: 200 }))).toBe(580);
-  });
-  it('아래로 200px면 +260분(약 4시간20분)', () => {
-    // 0.7*200 + 0.003*200*200 = 140 + 120 = 260
-    expect(calcProposedTime(base({ currentY: 300 }))).toBe(740);
-  });
-  it('위로도 대칭 — 위로 100px면 -100분', () => {
-    expect(calcProposedTime(base({ currentY: 0 }))).toBe(380);
-  });
-  it('카드 간격·앵커와 무관하게 드래그 거리에만 의존', () => {
-    const anchors: CardAnchor[] = [
-      { todoId: 'a', time: 480, centerY: 100 },
-      { todoId: 'b', time: 1200, centerY: 130 },
+  it('같은 시간 두 카드 사이에 놓으면 그 시간 유지(=재정렬)', () => {
+    const same: CardAnchor[] = [
+      { todoId: 'a', time: 720, centerY: 100 },
+      { todoId: 'b', time: 720, centerY: 200 },
     ];
-    expect(calcProposedTime(base({ currentY: 200, anchors }))).toBe(580);
-  });
-  it('하루 범위(새벽 4시=240분)로 클램프', () => {
-    // 위로 300px: -(0.7*300 + 0.003*300*300)= -(210+270)= -480 → 260-480 클램프
-    expect(calcProposedTime(base({ originalTime: 260, currentY: -200 }))).toBe(240);
-  });
-});
-
-describe('같은 시간 재정렬 밴드 (calcDragTime / calcDragInsertBeforeId / isReorderMode)', () => {
-  // 같은 시간(720) 형제 b가 centerY 150에 있고, 밴드는 [80,200]
-  const base = (over: Partial<DragState>): DragState => ({
-    todoId: 'x', originalTime: 720, startY: 100, initialCardCenterY: 100, cardHeight: 44,
-    currentY: 100, anchors: [{ todoId: 'b', time: 720, centerY: 150 }],
-    containerTop: 0, containerBottom: 2000, containerLeft: 0,
-    hasSameTimeSiblings: true, bandTop: 80, bandBottom: 200,
-    ...over,
-  });
-
-  it('밴드 안 + 형제 있음 → 재정렬 모드: 시간은 원래대로 유지', () => {
-    const ds = base({ currentY: 160 });
-    expect(isReorderMode(ds)).toBe(true);
-    expect(calcDragTime(ds)).toBe(720); // 가속 안 함
-  });
-
-  it('재정렬 모드: 형제보다 위면 그 앞(b), 아래면 맨 뒤(null)', () => {
-    expect(calcDragInsertBeforeId(base({ currentY: 120 }))).toBe('b'); // b(150) 위
-    expect(calcDragInsertBeforeId(base({ currentY: 180 }))).toBeNull(); // b 아래 → 맨 뒤
-  });
-
-  it('밴드 밖 → 시간변경 모드: 가속 시간 적용', () => {
-    const ds = base({ currentY: 400 }); // bandBottom(200) 아래
-    expect(isReorderMode(ds)).toBe(false);
-    expect(calcDragTime(ds)).toBe(1200); // 720 + (0.7*300 + 0.003*90000)=480
-  });
-
-  it('같은 시간 형제가 없으면 밴드 안이라도 항상 시간변경 모드', () => {
-    const ds = base({ hasSameTimeSiblings: false, currentY: 160 });
-    expect(isReorderMode(ds)).toBe(false);
+    expect(calcDragTime(base({ currentY: 150, anchors: same }))).toBe(720);
+    expect(calcDragInsertBeforeId(base({ currentY: 150, anchors: same }))).toBe('b');
   });
 });
 

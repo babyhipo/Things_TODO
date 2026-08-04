@@ -197,33 +197,18 @@ export function useTimelineInteractions(day: DayKey) {
         return [{ todoId: t.id, time: toVirt(t.time!), centerY: ar.top + ar.height / 2 }];
       });
 
-    // 같은 시간 형제(무리) 파악 → 재정렬 밴드 계산
-    const originalTime = toVirt(todo.time!);
-    const cardH = er ? er.height + 8 : 44;
-    const selfCenterY = er ? er.top + er.height / 2 : e.clientY;
-    const groupCenters = anchors.filter(a => a.time === originalTime).map(a => a.centerY);
-    const hasSameTimeSiblings = groupCenters.length > 0;
-    const centers = [selfCenterY, ...groupCenters];
-    const bandTop = Math.min(...centers) - cardH / 2;
-    const bandBottom = Math.max(...centers) + cardH / 2;
-
     const ds: DragState = {
       todoId: todo.id,
-      originalTime,
-      startY: e.clientY,
-      initialCardCenterY: selfCenterY,
-      cardHeight: cardH, // +8 = margin-bottom
+      initialCardCenterY: er ? er.top + er.height / 2 : e.clientY,
+      cardHeight: er ? er.height + 8 : 44, // +8 = margin-bottom
       currentY: e.clientY,
       anchors,
       containerTop:    cr.top,
       containerBottom: cr.bottom,
       containerLeft:   cr.left,
-      hasSameTimeSiblings,
-      bandTop,
-      bandBottom,
     };
     hapticGrab(el ?? undefined);
-    lastSnapRef.current = originalTime;
+    lastSnapRef.current = toVirt(todo.time!);
     setDrag(ds);
     dragRef.current = ds;
   };
