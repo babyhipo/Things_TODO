@@ -61,7 +61,7 @@ describe('calcDragTime / calcDragInsertBeforeId — 카드 상대 위치 기준'
     { todoId: 'b', time: 600, centerY: 200 },
   ];
   const base = (over: Partial<DragState>): DragState => ({
-    todoId: 'x', initialCardCenterY: 150, cardHeight: 44,
+    todoId: 'x', initialCardCenterY: 150, cardHeight: 44, grabOffset: 0,
     currentY: 150, anchors, containerTop: 0, containerBottom: 2000, containerLeft: 0,
     ...over,
   });
@@ -84,7 +84,20 @@ describe('calcDragTime / calcDragInsertBeforeId — 카드 상대 위치 기준'
     expect(calcDragInsertBeforeId(base({ currentY: 150, anchors: same }))).toBe('b');
   });
 
-  it('now 라인도 앵커로 섞어 빨간 바 위치가 현재시각과 이어진다', () => {
+  it('잡은 카드 자신 슬롯(self)이 앵커면 그 위치에서 원래 시간 그대로 (잡는 순간 안 바뀜)', () => {
+    // a(8:00,100) — self(10:00=600, centerY150) — b(14:00=840, centerY200)
+    const ab: CardAnchor[] = [
+      { todoId: 'a', time: 480, centerY: 100 },
+      { todoId: 'b', time: 840, centerY: 200 },
+    ];
+    const selfAnchor: CardAnchor = { todoId: 'x', time: 600, centerY: 150 };
+    // self 없으면 y=150(카드 원래 위치)이 a·b 보간으로 11:00(660)으로 튐 → 이게 버그
+    expect(calcDragTime(base({ currentY: 150, anchors: ab }))).toBe(660);
+    // self 앵커 있으면 원래 위치(150)에서 정확히 원래 시간(10:00=600)
+    expect(calcDragTime(base({ currentY: 150, anchors: ab, selfAnchor }))).toBe(600);
+  });
+
+  it('now 라인도 앵커로 섞어 빨간 바 위치가 현재시각과 정확히 이어진다', () => {
     // a(8:00, centerY100) — now(9:00=540, centerY150) — b(11:00=660, centerY200)
     const ab: CardAnchor[] = [
       { todoId: 'a', time: 480, centerY: 100 },
@@ -93,8 +106,8 @@ describe('calcDragTime / calcDragInsertBeforeId — 카드 상대 위치 기준'
     const nowAnchor: CardAnchor = { todoId: '__now__', time: 540, centerY: 150 };
     // now 없이 y=150 → a·b만 보간 → 9:30(570)
     expect(calcDragTime(base({ currentY: 150, anchors: ab }))).toBe(570);
-    // now 앵커 섞으면 빨간 바 위치(150)에서 현재시각(9:00) 부근으로 당겨짐
-    expect(calcDragTime(base({ currentY: 150, anchors: ab, nowAnchor }))).toBe(545);
+    // now 앵커 섞으면 빨간 바 위치(150)에서 정확히 현재시각(9:00=540)
+    expect(calcDragTime(base({ currentY: 150, anchors: ab, nowAnchor }))).toBe(540);
     // 삽입 순서는 now 무시(실제 카드 a/b 기준) — 150은 b(200) 위 → b 앞
     expect(calcDragInsertBeforeId(base({ currentY: 150, anchors: ab, nowAnchor }))).toBe('b');
   });

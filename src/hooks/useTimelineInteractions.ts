@@ -197,6 +197,12 @@ export function useTimelineInteractions(day: DayKey) {
         return [{ todoId: t.id, time: toVirt(t.time!), centerY: ar.top + ar.height / 2 }];
       });
 
+    // 잡은 카드 자신의 원래 슬롯 → 잡는 순간 시간이 안 바뀌도록 하는 waypoint
+    const selfCenterY = er ? er.top + er.height / 2 : e.clientY;
+    const selfAnchor: CardAnchor = { todoId: todo.id, time: toVirt(todo.time!), centerY: selfCenterY };
+    // 그립의 어느 지점을 눌러도 시작=카드 중심이 되도록 보정값 저장
+    const grabOffset = e.clientY - selfCenterY;
+
     // 현재시각 빨간 바(now 라인)를 시간 보간 waypoint로 (오늘 탭에만 있음)
     let nowAnchor: CardAnchor | undefined;
     const nowEl = timelineRef.current.querySelector<HTMLElement>('[data-now-line]');
@@ -207,13 +213,15 @@ export function useTimelineInteractions(day: DayKey) {
 
     const ds: DragState = {
       todoId: todo.id,
-      initialCardCenterY: er ? er.top + er.height / 2 : e.clientY,
+      initialCardCenterY: selfCenterY,
       cardHeight: er ? er.height + 8 : 44, // +8 = margin-bottom
-      currentY: e.clientY,
+      currentY: selfCenterY, // 보정: 시작은 카드 중심 = 원래 시간
       anchors,
       containerTop:    cr.top,
       containerBottom: cr.bottom,
       containerLeft:   cr.left,
+      grabOffset,
+      selfAnchor,
       nowAnchor,
     };
     hapticGrab(el ?? undefined);
@@ -345,17 +353,17 @@ export function useTimelineInteractions(day: DayKey) {
     const onMove = (e: PointerEvent) => {
       const ds = dragRef.current;
       if (ds) {
-        const dsNow = { ...ds, currentY: e.clientY };
+        const y = e.clientY - ds.grabOffset; // 누른 지점 보정
+        const dsNow = { ...ds, currentY: y };
         const t = calcDragTime(dsNow);
         const before = calcDragInsertBeforeId(dsNow) ?? '(end)';
-        // 시간이 바뀌거나(시간변경 모드) 삽입 위치가 바뀌면(재정렬 모드) 햅틱
         if (lastSnapRef.current !== t || lastInsertRef.current !== before) {
           hapticTick(pillRef.current);
           lastSnapRef.current = t;
           lastInsertRef.current = before;
         }
       }
-      setDrag(prev => prev ? { ...prev, currentY: e.clientY } : null);
+      setDrag(prev => prev ? { ...prev, currentY: e.clientY - prev.grabOffset } : null);
     };
     const onEnd = () => {
       const ds = dragRef.current;

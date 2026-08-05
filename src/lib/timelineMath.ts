@@ -19,19 +19,54 @@ export interface DragState {
   containerTop: number;
   containerBottom: number;
   containerLeft: number;
+  // 누른 지점과 카드 중심의 차이. currentY를 이 값으로 보정해 그립의 어느 지점을 눌러도
+  // 시작 시점이 카드 중심(=원래 시간)으로 맞춰지게 한다.
+  grabOffset: number;
+  // 잡은 카드 자신의 원래 슬롯(시간·위치)을 보간 waypoint로 사용 →
+  // 잡는 순간 시간이 안 바뀌게 한다. 삽입 순서 계산에는 쓰지 않는다.
+  selfAnchor?: CardAnchor;
   // 현재시각 빨간 바(now 라인)도 시간 보간의 waypoint로 사용 (오늘 탭에만 존재).
-  // 삽입 순서 계산에는 쓰지 않고, 시간 보간에만 섞는다.
   nowAnchor?: CardAnchor;
 }
 
 /**
  * 제안 시간(가상분): 포인터가 카드들 사이 어디에 있느냐로 정한다(카드 상대 위치 기준).
- * 손가락 위치 = 실제 배치 위치가 일치하도록. 같은 시간 카드 사이에 있으면 그 시간 유지.
- * now 라인이 있으면 그것도 앵커로 섞어, 빨간 바 위치가 현재시각과 이어지게 한다.
+ * 손가락 위치 = 실제 배치 위치가 일치하도록. self·now 앵커는 정확히 그 시간에 도달 가능한
+ * waypoint로 섞는다(겹침방지 간격 없음) → 잡는 순간 원래 시간 유지, 빨간 바=현재시각 일치.
  */
 export function calcDragTime(ds: DragState): number {
-  const anchors = ds.nowAnchor ? [...ds.anchors, ds.nowAnchor] : ds.anchors;
-  return calcTimeFromY(ds.currentY, anchors, ds.containerTop, ds.containerBottom);
+  const sorted = [
+    ...ds.anchors,
+    ...(ds.selfAnchor ? [ds.selfAnchor] : []),
+    ...(ds.nowAnchor ? [ds.nowAnchor] : []),
+  ].sort((a, b) => a.centerY - b.centerY);
+  const { currentY, containerTop, containerBottom } = ds;
+
+  if (sorted.length === 0) {
+    const t = Math.max(0, Math.min(1, (currentY - containerTop) / Math.max(1, containerBottom - containerTop)));
+    return snapTo(Math.round(DAY_START_MIN + t * (1439 - DAY_START_MIN)));
+  }
+  const first = sorted[0], last = sorted[sorted.length - 1];
+  // 첫 카드 위: 하루 시작(새벽4시)~첫 카드 시간
+  if (currentY <= first.centerY) {
+    const t = Math.max(0, Math.min(1, (currentY - containerTop) / Math.max(1, first.centerY - containerTop)));
+    return snapTo(Math.max(DAY_START_MIN, Math.round(DAY_START_MIN + t * (first.time - DAY_START_MIN))));
+  }
+  // 마지막 카드 아래: 마지막 카드 시간~하루 끝
+  if (currentY >= last.centerY) {
+    const t = Math.max(0, Math.min(1, (currentY - last.centerY) / Math.max(1, containerBottom - last.centerY)));
+    return snapTo(Math.min(1679, Math.round(last.time + t * (1679 - last.time))));
+  }
+  // 두 앵커 사이: 겹침방지 간격 없이 선형 보간(경계에서 앵커 시간 정확히 도달)
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const above = sorted[i], below = sorted[i + 1];
+    if (currentY >= above.centerY && currentY <= below.centerY) {
+      if (below.time <= above.time) return above.time; // 같은 시간(또는 역전) → 위 시간 유지
+      const t = (currentY - above.centerY) / Math.max(1, below.centerY - above.centerY);
+      return snapTo(Math.round(above.time + t * (below.time - above.time)));
+    }
+  }
+  return snapTo(DAY_START_MIN + 480); // fallback: 12:00
 }
 
 /** 삽입 위치(어느 카드 앞): 포인터 Y 기준 (null이면 맨 뒤) */
