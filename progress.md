@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-08-09
+- **Done**: Drag UX overhaul — position/card-relative time (reverted acceleration), grab keeps original
+  time (selfAnchor + grabOffset, no jump), now-line as interpolation waypoint, same-time "snap zone"
+  (±8px) to pick order (above=first/below=second) with translucent drag card. Same-time todos fully
+  supported (add/typed/drag → registration order; `assignTimeAt` store action). Sub-item & unscheduled
+  cards got click-edit + swipe-delete; unscheduled drop onto a card → becomes its sub-item.
+  '내일로 미루기' (right-swipe, incomplete only). Fonts ~1.1x + card text unified; time column narrowed
+  & timeline shifted left across all 3 views. **83 tests green, lint/build clean, browser-verified.**
+- **Decided**: Drag = card-relative (not accelerated) — "drop position = actual time"; keep same-time
+  ordering via snap zone, tunable `DRAG_SNAP_ZONE` in `src/lib/timelineMath.ts`.
+- **Blocked**: 없음. (`.claire` stray worktree was removed earlier.)
+- **Next**: Owner to feel-test drag on real iPhone (tune DRAG_SNAP_ZONE/thresholds if needed). Not pushed
+  (21 commits ahead of origin) — owner tests locally then pushes. Then: feature work per prd.md
+  (gamification "좍-" tear-off/ranking, recurring routines/templates).
+
+---
+
 ## 2026-07-27
 - **Done**: Lint cleanup + subDrag effect dep-array fix; template endTime save/restore (B-2, +test);
   unified sub-item ordering to manual `order` across all 3 views (B-1); extracted shared view logic
