@@ -46,23 +46,40 @@ export function calcDragTime(ds: DragState): number {
     const t = Math.max(0, Math.min(1, (currentY - containerTop) / Math.max(1, containerBottom - containerTop)));
     return snapTo(Math.round(DAY_START_MIN + t * (1439 - DAY_START_MIN)));
   }
+
+  // 스냅 존: 어느 앵커든 중심 ±DRAG_SNAP_ZONE 안이면 그 시간으로 고정
+  // (같은 시간 등록 여유 — 순서 앞/뒤는 getInsertionBeforeId가 중심 기준으로 판단)
+  let nearest: CardAnchor | null = null;
+  let nearestDist = Infinity;
+  for (const a of sorted) {
+    const d = Math.abs(currentY - a.centerY);
+    if (d <= DRAG_SNAP_ZONE && d < nearestDist) { nearest = a; nearestDist = d; }
+  }
+  if (nearest) return nearest.time;
+
   const first = sorted[0], last = sorted[sorted.length - 1];
-  // 첫 카드 위: 하루 시작(새벽4시)~첫 카드 시간
-  if (currentY <= first.centerY) {
-    const t = Math.max(0, Math.min(1, (currentY - containerTop) / Math.max(1, first.centerY - containerTop)));
+  // 첫 카드 위: 하루 시작(새벽4시)~첫 카드 시간 (존 바깥부터 보간)
+  if (currentY < first.centerY) {
+    const hi = first.centerY - DRAG_SNAP_ZONE;
+    const t = Math.max(0, Math.min(1, (currentY - containerTop) / Math.max(1, hi - containerTop)));
     return snapTo(Math.max(DAY_START_MIN, Math.round(DAY_START_MIN + t * (first.time - DAY_START_MIN))));
   }
   // 마지막 카드 아래: 마지막 카드 시간~하루 끝
-  if (currentY >= last.centerY) {
-    const t = Math.max(0, Math.min(1, (currentY - last.centerY) / Math.max(1, containerBottom - last.centerY)));
+  if (currentY > last.centerY) {
+    const lo = last.centerY + DRAG_SNAP_ZONE;
+    const t = Math.max(0, Math.min(1, (currentY - lo) / Math.max(1, containerBottom - lo)));
     return snapTo(Math.min(1679, Math.round(last.time + t * (1679 - last.time))));
   }
-  // 두 앵커 사이: 겹침방지 간격 없이 선형 보간(경계에서 앵커 시간 정확히 도달)
+  // 두 앵커 사이(존 바깥 중간 영역): 선형 보간
   for (let i = 0; i < sorted.length - 1; i++) {
     const above = sorted[i], below = sorted[i + 1];
-    if (currentY >= above.centerY && currentY <= below.centerY) {
-      if (below.time <= above.time) return above.time; // 같은 시간(또는 역전) → 위 시간 유지
-      const t = (currentY - above.centerY) / Math.max(1, below.centerY - above.centerY);
+    if (currentY > above.centerY && currentY < below.centerY) {
+      if (below.time <= above.time) return above.time; // 같은 시간 → 그 시간 유지
+      const lo = above.centerY + DRAG_SNAP_ZONE;
+      const hi = below.centerY - DRAG_SNAP_ZONE;
+      if (currentY <= lo) return above.time;
+      if (currentY >= hi) return below.time;
+      const t = (currentY - lo) / Math.max(1, hi - lo);
       return snapTo(Math.round(above.time + t * (below.time - above.time)));
     }
   }
@@ -114,6 +131,9 @@ export type Segment =
 
 // ── 상수 ────────────────────────────────────────────────────
 export const SNAP = 5; // 시간 스냅 단위(분)
+// 같은 시간 스냅 존(px): 카드 중심 ±이 값 안에서는 시간이 그 카드 시간으로 고정되고,
+// 중심보다 위=앞/아래=뒤로 순서만 갈린다. 이 존을 벗어나야 시간이 바뀐다.
+export const DRAG_SNAP_ZONE = 8;
 
 export const SECTION_MARKS = [
   { virtMin: 12 * 60, label: '오후', key: 'section-pm' },

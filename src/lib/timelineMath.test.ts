@@ -97,6 +97,23 @@ describe('calcDragTime / calcDragInsertBeforeId — 카드 상대 위치 기준'
     expect(calcDragTime(base({ currentY: 150, anchors: ab, selfAnchor }))).toBe(600);
   });
 
+  it('같은 시간 스냅 존: 카드 중심 근처면 그 시간 고정 + 중심 위=앞/아래=뒤로 순서만 갈림', () => {
+    // am(8:00,100) — y(9:00=540, centerY200) — pm(10:00,300)
+    const grp: CardAnchor[] = [
+      { todoId: 'am', time: 480, centerY: 100 },
+      { todoId: 'y',  time: 540, centerY: 200 },
+      { todoId: 'pm', time: 600, centerY: 300 },
+    ];
+    // 중심보다 살짝 위(197): 시간 9:00 고정 + y 앞(첫번째)
+    expect(calcDragTime(base({ currentY: 197, anchors: grp }))).toBe(540);
+    expect(calcDragInsertBeforeId(base({ currentY: 197, anchors: grp }))).toBe('y');
+    // 중심보다 살짝 아래(203): 시간 9:00 고정 + y 다음(pm 앞 = 두번째)
+    expect(calcDragTime(base({ currentY: 203, anchors: grp }))).toBe(540);
+    expect(calcDragInsertBeforeId(base({ currentY: 203, anchors: grp }))).toBe('pm');
+    // 존을 벗어나면(13px 아래) 시간이 바뀌기 시작
+    expect(calcDragTime(base({ currentY: 213, anchors: grp }))).not.toBe(540);
+  });
+
   it('now 라인도 앵커로 섞어 빨간 바 위치가 현재시각과 정확히 이어진다', () => {
     // a(8:00, centerY100) — now(9:00=540, centerY150) — b(11:00=660, centerY200)
     const ab: CardAnchor[] = [

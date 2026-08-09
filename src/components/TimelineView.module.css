@@ -216,6 +216,8 @@
 .cardDragging {
   box-shadow: 0 12px 32px rgba(59, 91, 219, 0.2);
   border-left-color: var(--color-accent) !important;
+  /* 드래그 중인 카드는 반투명 → 아래 카드·삽입 미리보기가 비쳐 보이도록 */
+  opacity: 0.75;
 }
 
 .cardDragOutside {
