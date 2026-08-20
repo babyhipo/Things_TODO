@@ -1,7 +1,6 @@
-// 믹스뷰·시간표뷰가 공유하는 상호작용 로직(편집·드래그·스와이프·하위항목 이동)을
-// 한 곳으로 모은 훅. 두 뷰는 레이아웃(JSX)만 다르고 동작 로직은 동일하므로,
-// 상태·핸들러·파생값을 여기서 만들어 두 컴포넌트가 함께 쓴다.
-// (레이아웃은 일부러 분리 유지 — 강제 병합하지 않는다.)
+// 믹스뷰의 상호작용 로직(편집·드래그·스와이프·하위항목 이동)을 한 곳으로 모은 훅.
+// 뷰 컴포넌트는 레이아웃(JSX)만 담당하고, 상태·핸들러·파생값은 여기서 만든다.
+// (예전엔 시간표뷰와 공유했으나 시간표뷰는 제거됨. 재사용 가능하도록 구조는 유지)
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
@@ -23,6 +22,12 @@ import {
   type SubDragState,
   type Segment,
 } from '../lib/timelineMath';
+
+// 햅틱 펄스(iOS)용 요소 조회 — 드래그 대상 루트카드/하위항목 DOM을 찾는다.
+const cardEl = (id: string | null) =>
+  id ? document.querySelector<HTMLElement>(`[data-todo-id="${id}"]`) : null;
+const subEl = (id: string | null) =>
+  id ? document.querySelector<HTMLElement>(`[data-sub-id="${id}"]`) : null;
 
 export function useTimelineInteractions(day: DayKey) {
   const days               = useTodoStore((s) => s.days);
@@ -92,7 +97,6 @@ export function useTimelineInteractions(day: DayKey) {
   const lastInsertRef      = useRef<string | null>(null); // 재정렬 삽입 위치 변화 햅틱용
   const lastSubOrderRef    = useRef<string | null>(null);
   const pillRef            = useRef<HTMLDivElement>(null);
-  const ghostRef           = useRef<HTMLDivElement>(null);
   useEffect(() => { dragRef.current = drag; });
   useEffect(() => { unscheduledDragRef.current = unscheduledDrag; });
   useEffect(() => { swipeRef.current = swipe; });
@@ -116,14 +120,52 @@ export function useTimelineInteractions(day: DayKey) {
     };
   }, [days, day]);
 
+  // ── 드래그 중 표시용 순서 ──
+  // 잡은 카드를 "놓일 위치"에 실제로 끼워넣은 순서를 만든다. (점선 미리보기 칸 대신
+  // 진짜 카드가 그 자리에 배치되고, 나머지 카드는 자연 재배치로 밀려난다.)
+  // 클론의 time을 목표 시간으로 덮어써서 섹션 구분선·갭 계산도 목표 시간 기준이 되게 한다.
+  const displayScheduled = useMemo(() => {
+    // 1) 시간지정 카드 드래그: 잡은 카드를 목표 위치로 재배치
+    if (drag) {
+      const dragged = scheduled.find(t => t.id === drag.todoId);
+      if (!dragged) return scheduled;
+      const proposed = calcDragTime(drag);           // 가상분
+      const beforeId = calcDragInsertBeforeId(drag); // null이면 맨 뒤
+      const rest  = scheduled.filter(t => t.id !== drag.todoId);
+      const clone = { ...dragged, time: fromVirt(proposed) };
+      const idx   = beforeId == null ? rest.length : rest.findIndex(t => t.id === beforeId);
+      const out   = [...rest];
+      out.splice(idx < 0 ? rest.length : idx, 0, clone);
+      return out;
+    }
+    // 2) 미지정 카드를 타임라인 위로 드래그(카드 위가 아닐 때): 실제 카드를 목표 시간 슬롯에 삽입
+    if (unscheduledDrag && subDragParentTarget === null) {
+      const overTl = unscheduledDrag.currentY >= unscheduledDrag.timelineTop
+                  && unscheduledDrag.currentY <= unscheduledDrag.timelineBottom;
+      if (overTl) {
+        const dragged = unscheduled.find(t => t.id === unscheduledDrag.todoId);
+        if (dragged) {
+          const t = calcTimeFromY(unscheduledDrag.currentY, unscheduledDrag.anchors, unscheduledDrag.timelineTop, unscheduledDrag.timelineBottom);
+          const beforeId = getInsertionBeforeId(unscheduledDrag.currentY, unscheduledDrag.anchors);
+          const clone = { ...dragged, time: fromVirt(t) };
+          const idx = beforeId == null ? scheduled.length : scheduled.findIndex(s => s.id === beforeId);
+          const out = [...scheduled];
+          out.splice(idx < 0 ? scheduled.length : idx, 0, clone);
+          return out;
+        }
+      }
+    }
+    return scheduled;
+  }, [scheduled, drag, unscheduledDrag, subDragParentTarget, unscheduled]);
+
   // ── 세그먼트: 이벤트/갭/현재시각/섹션 구분선 ──
   const segments = useMemo<Segment[]>(() => {
     const result: Segment[] = [];
     let nowInserted = false;
     const sectionsInserted = new Set<string>();
 
-    for (let i = 0; i < scheduled.length; i++) {
-      const virtTime = toVirt(scheduled[i].time ?? 0);
+    for (let i = 0; i < displayScheduled.length; i++) {
+      const virtTime = toVirt(displayScheduled[i].time ?? 0);
 
       for (const mark of SECTION_MARKS) {
         if (!sectionsInserted.has(mark.key) && virtTime >= mark.virtMin) {
@@ -137,11 +179,11 @@ export function useTimelineInteractions(day: DayKey) {
         nowInserted = true;
       }
 
-      result.push({ type: 'event', todo: scheduled[i] });
+      result.push({ type: 'event', todo: displayScheduled[i] });
 
-      if (i < scheduled.length - 1) {
+      if (i < displayScheduled.length - 1) {
         const fromMin = virtTime;
-        const toMin   = toVirt(scheduled[i + 1].time ?? 0);
+        const toMin   = toVirt(displayScheduled[i + 1].time ?? 0);
         const gap     = toMin - fromMin;
         const isPast  = day === 'today' && fromMin < now;
         if (gap > 180 && !isPast)
@@ -150,7 +192,7 @@ export function useTimelineInteractions(day: DayKey) {
     }
 
     // 루프 후 미삽입 항목(구분선 + now 배지)을 시간순으로 정렬해 추가
-    if (scheduled.length > 0) {
+    if (displayScheduled.length > 0) {
       const pending: { virtMin: number; fn: () => void }[] = [];
 
       for (const mark of SECTION_MARKS) {
@@ -169,7 +211,7 @@ export function useTimelineInteractions(day: DayKey) {
     }
 
     return result;
-  }, [scheduled, day, now]);
+  }, [displayScheduled, day, now]);
 
   const toggleGap = (key: string) =>
     setExpandedGaps(prev => {
@@ -403,7 +445,7 @@ export function useTimelineInteractions(day: DayKey) {
       if (subDragParentTargetRef.current !== found) {
         subDragParentTargetRef.current = found;
         setSubDragParentTarget(found);
-        if (found) hapticReorder(ghostRef.current);
+        if (found) hapticReorder(cardEl(found));
       }
       // 카드 위가 아닐 때만 시간 스냅 햅틱
       if (ds && !found) {
@@ -434,7 +476,7 @@ export function useTimelineInteractions(day: DayKey) {
       const target = subDragParentTargetRef.current;
       if (target) {
         // 카드 위에 드롭 → 그 카드의 하위일정으로 편입
-        hapticDrop(ghostRef.current);
+        hapticDrop(cardEl(target));
         setParentId(day, ds.todoId, target);
       } else {
         const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
@@ -512,7 +554,7 @@ export function useTimelineInteractions(day: DayKey) {
         if (!inserted) newOrder.push(ds.todoId);
         const orderKey = newOrder.join(',');
         if (lastSubOrderRef.current !== orderKey) {
-          hapticReorder(ghostRef.current);
+          hapticReorder(subEl(ds.todoId));
           lastSubOrderRef.current = orderKey;
         }
         setProposedSubOrder(newOrder);
@@ -524,12 +566,12 @@ export function useTimelineInteractions(day: DayKey) {
       if (!ds) return;
       const target = subDragParentTargetRef.current;
       if (target) {
-        hapticDrop(ghostRef.current);
+        hapticDrop(cardEl(target));
         setParentId(day, ds.todoId, target);
       } else {
         const order = proposedSubOrderRef.current;
         if (order && order.length > 1) {
-          hapticDrop(ghostRef.current);
+          hapticDrop(subEl(ds.todoId));
           reorderSubItems(day, ds.parentId, order);
         }
       }
@@ -551,28 +593,21 @@ export function useTimelineInteractions(day: DayKey) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!subDrag, day, setParentId, reorderSubItems]);
 
-  // ── 드롭존 삽입 위치·파생값 ──
-  // 모드에 따라: 재정렬(포인터Y 기준) / 시간변경(제안시간 기준)
-  const insertBeforeId = drag ? calcDragInsertBeforeId(drag) : null;
-  // 드래그 중 표시할 제안 시간(가상분): 재정렬 모드면 원래 시간 그대로
+  // ── 파생값 ──
+  // 드래그 중 표시할 제안 시간(가상분) — 일정카드 시간 텍스트에 반영
   const dragProposedTime = drag ? calcDragTime(drag) : null;
 
   // 언스케줄 드래그가 카드 위에 있으면(하위일정 편입 대상) 시간 배정 UI는 숨긴다
   const unscheduledOverCard = !!unscheduledDrag && subDragParentTarget !== null;
+  // 미지정 카드가 타임라인 영역 위에 있는지(= 실제 카드가 타임라인에 삽입돼 있는지)
   const isOverTl = !!unscheduledDrag
     && !unscheduledOverCard
     && unscheduledDrag.currentY >= unscheduledDrag.timelineTop
     && unscheduledDrag.currentY <= unscheduledDrag.timelineBottom;
+  // 빈 타임라인 안내 문구용 제안 시간
   const unscheduledProposedTime = (unscheduledDrag && isOverTl)
     ? calcTimeFromY(unscheduledDrag.currentY, unscheduledDrag.anchors, unscheduledDrag.timelineTop, unscheduledDrag.timelineBottom)
     : null;
-  const unscheduledInsertBeforeId = (unscheduledDrag && isOverTl)
-    ? getInsertionBeforeId(unscheduledDrag.currentY, unscheduledDrag.anchors)
-    : null;
-
-  const effectiveInsertBeforeId = drag ? insertBeforeId : unscheduledInsertBeforeId;
-  const showDropZone = !!drag || isOverTl;
-  const dropZoneHeight = drag ? drag.cardHeight : 44;
 
   return {
     // 스토어 값(JSX에서 사용)
@@ -586,11 +621,11 @@ export function useTimelineInteractions(day: DayKey) {
     // 드래그/스와이프 상태
     drag, unscheduledDrag, swipe, subDrag, proposedSubOrder, subDragParentTarget,
     // ref
-    timelineRef, pillRef, ghostRef,
+    timelineRef, pillRef,
     // 핸들러
     handleDragStart, handleSwipeStart, handleSubDragStart, handleUnscheduledDragStart,
     // 파생값
-    isOverTl, unscheduledProposedTime, effectiveInsertBeforeId, showDropZone, dropZoneHeight,
+    isOverTl, unscheduledProposedTime,
     dragProposedTime,
   };
 }

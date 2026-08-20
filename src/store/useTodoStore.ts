@@ -72,6 +72,41 @@ function roundToFive(n: number): number {
   return Math.round(n / 5) * 5;
 }
 
+// 순서 변경 후 옮긴 항목에 배정될 시간을 계산한다(같은 부모 형제의 앞/뒤 시간 보간).
+// reorderTodos(실제 배정)와 목록뷰의 드래그 중 미리보기가 동일한 값을 쓰도록 공용 함수로 분리.
+export function computeReorderedTime(reordered: Todo[], movedId: string): number | null {
+  const moved = reordered.find((t) => t.id === movedId);
+  if (!moved) return null;
+  const siblings = reordered
+    .filter((t) => t.parentId === moved.parentId)
+    .sort((a, b) => a.order - b.order);
+  const idx = siblings.findIndex((t) => t.id === movedId);
+
+  let prevTime: number | null = null;
+  for (let i = idx - 1; i >= 0; i -= 1) {
+    if (siblings[i].time !== null) { prevTime = siblings[i].time; break; }
+  }
+  let nextTime: number | null = null;
+  for (let i = idx + 1; i < siblings.length; i += 1) {
+    if (siblings[i].time !== null) { nextTime = siblings[i].time; break; }
+  }
+
+  let newTime: number | null = moved.time;
+  if (prevTime !== null && nextTime !== null) {
+    if (prevTime === nextTime) {
+      newTime = prevTime; // 같은 시간 사이 → 그 시간 유지
+    } else {
+      const mid = roundToFive((prevTime + nextTime) / 2);
+      newTime = mid === prevTime ? clampTime(prevTime + 5) : clampTime(mid);
+    }
+  } else if (prevTime !== null) {
+    newTime = clampTime(prevTime + 5);
+  } else if (nextTime !== null) {
+    newTime = clampTime(nextTime - 5);
+  }
+  return newTime;
+}
+
 // 입력 순서대로 맨 끝에 append. 시간순 자동 정렬은 하지 않음.
 // 새 항목의 order를 항상 기존 최대치 다음(끝)으로 지정해야 densify 후에도 맨 뒤에 놓인다.
 // (order를 0으로 두면 기존 0번 항목과 동률이 되어 두 번째 자리로 끼어드는 버그가 있었음)
@@ -245,41 +280,8 @@ export const useTodoStore = create<TodoState>()(
             return { days: { ...state.days, [day]: reordered }, historyLength: _hist.length };
           }
 
-          // 같은 부모를 공유하는 형제만 대상으로 prev/next 탐색
-          const siblings = reordered
-            .filter((t) => t.parentId === moved.parentId)
-            .sort((a, b) => a.order - b.order);
-          const idx = siblings.findIndex((t) => t.id === movedId);
-
-          let prevTime: number | null = null;
-          for (let i = idx - 1; i >= 0; i -= 1) {
-            if (siblings[i].time !== null) {
-              prevTime = siblings[i].time;
-              break;
-            }
-          }
-          let nextTime: number | null = null;
-          for (let i = idx + 1; i < siblings.length; i += 1) {
-            if (siblings[i].time !== null) {
-              nextTime = siblings[i].time;
-              break;
-            }
-          }
-
-          let newTime: number | null = moved.time;
-          if (prevTime !== null && nextTime !== null) {
-            if (prevTime === nextTime) {
-              // 같은 시간 사이에 놓으면 그 시간 그대로 유지 (같은 시간 여러 개 허용)
-              newTime = prevTime;
-            } else {
-              const mid = roundToFive((prevTime + nextTime) / 2);
-              newTime = mid === prevTime ? clampTime(prevTime + 5) : clampTime(mid);
-            }
-          } else if (prevTime !== null) {
-            newTime = clampTime(prevTime + 5);
-          } else if (nextTime !== null) {
-            newTime = clampTime(nextTime - 5);
-          }
+          // 시간 보간은 공용 함수로 (목록뷰 미리보기와 동일 결과 보장)
+          const newTime = computeReorderedTime(reordered, movedId);
 
           const next = reordered.map((t) => (t.id === movedId ? { ...t, time: newTime } : t));
           return { days: { ...state.days, [day]: next }, historyLength: _hist.length };

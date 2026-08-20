@@ -1,5 +1,4 @@
-// 믹스뷰·시간표뷰가 공유하는 순수 계산 로직과 타입.
-// (두 뷰에 동일하게 복사돼 있던 것을 한 곳으로 모음)
+// 믹스뷰 드래그/보간에 쓰는 순수 계산 로직과 타입.
 import { toVirt, DAY_START_MIN } from './dayBoundary';
 import type { Todo } from '../types/todo';
 

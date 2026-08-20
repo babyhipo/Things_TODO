@@ -31,23 +31,6 @@
   z-index: 0;
 }
 
-/* ── 드롭존 ── */
-.dropZone {
-  border-radius: var(--radius-md, 8px);
-  border: 2px dashed var(--color-accent);
-  background: linear-gradient(135deg,
-    rgba(59, 91, 219, 0.06),
-    rgba(59, 91, 219, 0.12)
-  );
-  margin-bottom: 8px;
-  animation: dropZonePulse 700ms ease-in-out infinite alternate;
-}
-
-@keyframes dropZonePulse {
-  from { opacity: 0.5; border-color: rgba(59, 91, 219, 0.5); }
-  to   { opacity: 1;   border-color: rgba(59, 91, 219, 1);   }
-}
-
 /* ── 섹션 구분선 ── */
 .sectionDivider {
   display: flex;
@@ -130,9 +113,19 @@
 }
 
 .cardDragging {
-  box-shadow: 0 12px 32px rgba(59, 91, 219, 0.2);
-  /* 드래그 중인 카드는 반투명 → 아래 카드·삽입 미리보기가 비쳐 보이도록 */
-  opacity: 0.75;
+  /* 튀어오른 느낌: 불투명 카드 + 진한 그림자. 점선 박스(.dropBox)는 카드 뒤에서 살짝 삐져나옴 */
+  box-shadow: 0 14px 34px rgba(59, 91, 219, 0.30);
+}
+
+/* 드롭될 자리를 나타내는 점선 박스 — 카드보다 조금 크게, 카드 뒤(z-index:-1)에 배치 */
+.dropBox {
+  position: absolute;
+  inset: -5px;
+  border: 2px dashed var(--color-accent);
+  border-radius: 12px;
+  background: rgba(59, 91, 219, 0.05);
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* 구간 일정: 상단 정렬 + 내부 요소 margin-top 보정 */
@@ -186,12 +179,6 @@
 
 .timeLabelOverdue {
   color: var(--color-event-red, #EF4444);
-}
-
-.timeLabelDragging {
-  color: var(--color-accent);
-  font-size: 14px;
-  font-weight: 800;
 }
 
 /* ── 체크박스 (목록뷰 스타일, 세로선 위치에 배치) ── */
@@ -317,8 +304,12 @@
 }
 
 .subItemDragging {
-  opacity: 0;
+  /* 드래그 중인 하위항목: 튀어오른 느낌 + 점선은 항목 바깥으로 (outline-offset 양수) */
   pointer-events: none;
+  box-shadow: 0 10px 26px rgba(59, 91, 219, 0.22);
+  outline: 2px dashed var(--color-accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-md, 8px);
 }
 
 .subItemArrow {
@@ -551,22 +542,24 @@
   line-height: 1;
 }
 
-/* ── 플로팅 시간 인디케이터 ── */
-.floatingIndicator {
-  position: fixed;
-  z-index: 200;
-  pointer-events: none;
+/* ── 드래그 시간 알약 (드래그 카드 왼쪽에 붙는 알약 + 짧은 선) ── */
+.dragPill {
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
   display: flex;
   align-items: center;
-  transform: translateY(-50%);
+  pointer-events: none;
 }
 
-.floatingPill {
+.dragPillBadge {
   background-color: var(--color-accent);
   color: #FFFFFF;
   font-size: 14px;
   font-weight: 800;
-  padding: 5px 10px;
+  padding: 4px 9px;
   border-radius: 20px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
@@ -575,9 +568,9 @@
   flex: 0 0 auto;
 }
 
-.floatingLine {
+.dragPillLine {
   height: 2px;
-  width: 16px;
+  width: 10px;
   background-color: var(--color-accent);
   opacity: 0.6;
   flex: 0 0 auto;
@@ -780,26 +773,4 @@
   background-color: rgba(59, 91, 219, 0.06);
   color: var(--color-accent);
   font-weight: 700;
-}
-
-/* ── 언스케줄 드래그 고스트 ── */
-.ghostCard {
-  position: fixed;
-  z-index: 200;
-  pointer-events: none;
-  background: var(--color-bg-card, #FFFFFF);
-  color: var(--color-text, #1F1F1F);
-  font-size: var(--card-text);
-  font-weight: 600;
-  padding: 3px 12px 3px 10px;
-  border-radius: var(--radius-md, 8px);
-  border: 1.5px solid var(--color-accent, #3B5BDB);
-  opacity: 0.92;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  transform: translateY(-50%);
-  min-height: 26px;
-  display: flex;
-  align-items: center;
 }

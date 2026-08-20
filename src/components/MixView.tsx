@@ -14,13 +14,11 @@ export function MixView({ day }: MixViewProps) {
     scheduled, unscheduled, childrenByParent, segments,
     expandedGaps, toggleGap,
     drag, unscheduledDrag, swipe, subDrag, proposedSubOrder, subDragParentTarget,
-    timelineRef, pillRef, ghostRef,
+    timelineRef, pillRef,
     handleDragStart, handleSwipeStart, handleSubDragStart, handleUnscheduledDragStart,
-    isOverTl, unscheduledProposedTime, effectiveInsertBeforeId, showDropZone, dropZoneHeight,
+    isOverTl, unscheduledProposedTime,
     dragProposedTime,
   } = useTimelineInteractions(day);
-
-  let dropZoneRendered = false;
 
   if (scheduled.length === 0 && unscheduled.length === 0) {
     return (
@@ -46,7 +44,7 @@ export function MixView({ day }: MixViewProps) {
 
         {segments.map(seg => {
 
-          /* ── 섹션 구분선 ── */
+          /* ── 섹션 구분선 (오후 12시 / 저녁 오후 6시) ── */
           if (seg.type === 'section') {
             return (
               <div key={seg.key} className={styles.sectionDivider}>
@@ -104,21 +102,17 @@ export function MixView({ day }: MixViewProps) {
           /* ── 이벤트 카드 ── */
           const { todo }   = seg;
           const isDragging       = drag?.todoId === todo.id;
+          // 미지정 카드를 타임라인 위로 끌어 여기(목표 슬롯)에 삽입돼 있는 상태
+          const isPlacing        = unscheduledDrag?.todoId === todo.id;
+          const lifted           = isDragging || isPlacing; // 집어올린 카드(반투명·강조)
           const isSelected       = pendingParentId === todo.id;
           const isSubDropTarget  = subDragParentTarget === todo.id;
-
-          const showDropZoneHere =
-            showDropZone && !isDragging && !dropZoneRendered && todo.id === effectiveInsertBeforeId;
-          if (showDropZoneHere) dropZoneRendered = true;
 
           const virtTodoTime = toVirt(todo.time!);
           const displayTime = isDragging ? dragProposedTime! : virtTodoTime;
           const isOverdue   = !todo.completed && todo.time !== null
-                            && day === 'today' && virtTodoTime < now && !isDragging;
+                            && day === 'today' && virtTodoTime < now && !lifted;
           const color = eventColor(todo.time, isOverdue, todo.completed, now, day);
-          const translateY  = isDragging && drag
-            ? drag.currentY - drag.initialCardCenterY
-            : 0;
 
           const isSwipingThis  = swipe?.todoId === todo.id && swipe.direction !== 'v';
           const rawOffset      = isSwipingThis ? swipe!.currentX - swipe!.startX : 0;
@@ -131,11 +125,12 @@ export function MixView({ day }: MixViewProps) {
               data-todo-id={todo.id}
               className={`${styles.eventRow}
                 ${todo.completed ? styles.eventCompleted : ''}
-                ${isDragging    ? styles.eventRowDragging : ''}`}
-              style={isDragging
-                ? { transform: `translateY(${translateY}px)`, zIndex: 50 }
-                : undefined}
+                ${lifted        ? styles.eventRowDragging : ''}`}
+              style={lifted ? { zIndex: 50 } : undefined}
             >
+              {/* 드롭될 자리 점선 박스 — 카드 뒤(하위 레이어)에서 살짝 삐져나옴 */}
+              {lifted && <div className={styles.dropBox} aria-hidden="true" />}
+
               {/* 스와이프 삭제 힌트 (왼쪽) */}
               {isSwipingThis && swipeOffset < -12 && (
                 <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgress }}>×</div>
@@ -147,23 +142,32 @@ export function MixView({ day }: MixViewProps) {
 
               {/* 카드: 시간 레이블 포함 */}
               <div
-                className={`${styles.card} ${isDragging ? styles.cardDragging : ''} ${todo.endTime != null ? styles.cardRange : ''} ${isSelected ? styles.cardSelected : ''} ${isSubDropTarget ? styles.cardSubDropTarget : ''}`}
+                className={`${styles.card} ${lifted ? styles.cardDragging : ''} ${todo.endTime != null ? styles.cardRange : ''} ${isSelected ? styles.cardSelected : ''} ${isSubDropTarget ? styles.cardSubDropTarget : ''}`}
                 onPointerDown={e => handleSwipeStart(e, todo.id)}
                 style={{
                   transform: `translateX(${swipeOffset}px)`,
                   transition: isSwipingThis ? 'none' : 'transform 200ms ease, box-shadow 150ms',
                 }}
               >
-                {/* 시간 레이블 (카드 내 좌측) */}
+                {/* 드래그 중: 카드 왼쪽에 시간 알약(+짧은 선)을 붙여 이 카드의 시간으로 표시 */}
+                {lifted && (
+                  <div className={styles.dragPill} aria-hidden="true">
+                    <span ref={pillRef} className={styles.dragPillBadge}>{formatTime(displayTime)}</span>
+                    <span className={styles.dragPillLine} />
+                  </div>
+                )}
+
+                {/* 시간 레이블 (카드 내 좌측) — 드래그 중엔 알약으로 대체하므로 숨김 */}
                 <div className={styles.timeWrap}>
-                  <span
-                    className={`${styles.timeLabel} ${isDragging ? styles.timeLabelDragging : ''}`}
-                    style={{ color: isDragging ? undefined : color }}
-                  >
-                    {formatTime(displayTime)}
-                  </span>
-                  {todo.endTime != null && !isDragging && (
-                    <span className={styles.timeEnd}>-{formatTime(todo.endTime)}</span>
+                  {!lifted && (
+                    <>
+                      <span className={styles.timeLabel} style={{ color }}>
+                        {formatTime(displayTime)}
+                      </span>
+                      {todo.endTime != null && (
+                        <span className={styles.timeEnd}>-{formatTime(todo.endTime)}</span>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -253,13 +257,8 @@ export function MixView({ day }: MixViewProps) {
 
           return (
             <div key={todo.id}>
-              {showDropZoneHere && (
-                <div className={styles.dropZone} style={{ height: dropZoneHeight }} />
-              )}
-              {isDragging
-                ? <div style={{ height: 0, overflow: 'visible' }}>{card}</div>
-                : card}
-              {!isDragging && displayChildren.map(child => {
+              {card}
+              {!isDragging && !isPlacing && displayChildren.map(child => {
                 // 부모카드와 동일한 스와이프(왼쪽 삭제 / 오른쪽 내일 이동) 계산
                 const isSwipingSub  = swipe?.todoId === child.id && swipe.direction !== 'v';
                 const rawOffsetSub  = isSwipingSub ? swipe!.currentX - swipe!.startX : 0;
@@ -337,48 +336,7 @@ export function MixView({ day }: MixViewProps) {
             </div>
           );
         })}
-
-        {showDropZone && !dropZoneRendered && effectiveInsertBeforeId === null && scheduled.length > 0 && (
-          <div className={styles.dropZone} style={{ height: dropZoneHeight }} />
-        )}
       </div>
-
-      {/* 플로팅 시간 인디케이터 */}
-      {drag && (
-        <div className={styles.floatingIndicator}
-          style={{ top: drag.currentY, left: drag.containerLeft }}>
-          <div ref={pillRef} className={styles.floatingPill}>{formatTime(dragProposedTime ?? 0)}</div>
-          <div className={styles.floatingLine} />
-        </div>
-      )}
-
-      {unscheduledDrag && isOverTl && unscheduledProposedTime !== null && (
-        <div className={styles.floatingIndicator}
-          style={{ top: unscheduledDrag.currentY, left: unscheduledDrag.timelineLeft }}>
-          <div ref={pillRef} className={styles.floatingPill}>{formatTime(unscheduledProposedTime)}</div>
-          <div className={styles.floatingLine} />
-        </div>
-      )}
-      {unscheduledDrag && (
-        <div
-          className={styles.ghostCard}
-          style={{ top: unscheduledDrag.currentY, left: unscheduledDrag.timelineLeft + 64 }}
-        >
-          {unscheduledDrag.text || '(내용 없음)'}
-        </div>
-      )}
-
-      {/* 하위 일정 드래그: 부모 변경 대상 위에 있을 때만 인디케이터 표시 */}
-      {subDrag && (
-        <div ref={ghostRef} className={styles.ghostCard}
-          style={{
-            top: subDrag.currentY,
-            left: subDrag.timelineLeft + 56,
-            width: subDrag.timelineWidth - 72,
-          }}>
-          {subDrag.text || '(내용 없음)'}
-        </div>
-      )}
 
       {/* 시간 미지정 */}
       {unscheduled.length > 0 && (
@@ -386,6 +344,8 @@ export function MixView({ day }: MixViewProps) {
           <h3 className={styles.unscheduledTitle}>시간 미지정</h3>
           <div className={styles.unscheduledList}>
             {unscheduled.map(todo => {
+              // 타임라인 위로 끌어 실제 카드가 타임라인에 삽입돼 있으면 여기선 숨김
+              if (isOverTl && unscheduledDrag?.todoId === todo.id) return null;
               const isSwipingU      = swipe?.todoId === todo.id && swipe.direction !== 'v';
               const rawOffsetU      = isSwipingU ? swipe!.currentX - swipe!.startX : 0;
               const swipeOffsetU    = Math.max(-80, Math.min(80, rawOffsetU));

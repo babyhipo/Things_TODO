@@ -5,7 +5,6 @@ import { ViewToggle, type ContentView } from './components/ViewToggle';
 import { ListToolbar } from './components/ListToolbar';
 import { TodoList } from './components/TodoList';
 import { TodoInput } from './components/TodoInput';
-import { TimelineView } from './components/TimelineView';
 import { MixView } from './components/MixView';
 import { TemplatePanel } from './components/templates/TemplatePanel';
 import { useDayRollover } from './hooks/useDayRollover';
@@ -33,9 +32,7 @@ function App() {
     >
       <ListToolbar day={activeStoreDay} />
 
-      {contentView === 'timetable' ? (
-        <TimelineView day={activeStoreDay} />
-      ) : contentView === 'mix' ? (
+      {contentView === 'mix' ? (
         <MixView day={activeStoreDay} />
       ) : (
         <TodoList />

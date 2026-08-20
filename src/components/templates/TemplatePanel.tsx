@@ -168,7 +168,7 @@ function TemplatePanelContent({ onClose, embedded }: { onClose?: () => void; emb
             <div className={styles.emptyEmbedded}>
               <p className={styles.emptyTitle}>저장된 템플릿이 없습니다</p>
               <p className={styles.emptyDesc}>
-                목록/시간표 탭에서 일정을 작성하고<br />아래 버튼으로 저장해보세요
+                목록/믹스 탭에서 일정을 작성하고<br />아래 버튼으로 저장해보세요
               </p>
             </div>
           ) : (

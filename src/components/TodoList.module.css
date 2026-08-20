@@ -39,3 +39,14 @@
   font-weight: 600;
   color: var(--color-text, #1F1F1F);
 }
+
+/* 드래그로 순서를 바꾸면 배정될 시간을 카드 안 텍스트로 미리 표시 */
+.dragGhostTime {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-accent, #3B5BDB);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+  margin-right: 8px;
+  flex: 0 0 auto;
+}

@@ -4,6 +4,7 @@ import {
   DndContext,
   DragOverlay,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
@@ -19,9 +20,10 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import styles from './TodoList.module.css';
-import { useTodoStore } from '../store/useTodoStore';
+import { useTodoStore, computeReorderedTime } from '../store/useTodoStore';
 import { TodoItem } from './TodoItem';
 import { toVirt } from '../lib/dayBoundary';
+import { formatTime } from '../lib/timeFormatter';
 
 function getCurrentMinutes(): number {
   const d = new Date();
@@ -97,10 +99,16 @@ export function TodoList() {
   const ids = useMemo(() => todos.map((t) => t.id), [todos]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
 
   const handleDragStart = (event: DragStartEvent) => {
     hapticGrab();
     setActiveId(String(event.active.id));
+    setOverId(String(event.active.id));
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    setOverId(event.over ? String(event.over.id) : null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -115,11 +123,24 @@ export function TodoList() {
       }
     }
     setActiveId(null);
+    setOverId(null);
   };
 
-  const handleDragCancel = () => setActiveId(null);
+  const handleDragCancel = () => { setActiveId(null); setOverId(null); };
 
   const activeTodo = activeId ? todos.find((t) => t.id === activeId) : null;
+
+  // 드래그로 순서를 바꿀 때 배정될 시간(미리보기) — 실제 드롭 결과와 동일한 계산
+  const previewTime = useMemo(() => {
+    if (!activeId || !overId || activeId === overId) return null;
+    const oldIndex = ids.indexOf(activeId);
+    const newIndex = ids.indexOf(overId);
+    if (oldIndex === -1 || newIndex === -1) return null;
+    const newIds = arrayMove(ids, oldIndex, newIndex);
+    const byId = new Map(todos.map((t) => [t.id, t] as const));
+    const reordered = newIds.map((id, i) => ({ ...byId.get(id)!, order: i }));
+    return computeReorderedTime(reordered, activeId);
+  }, [activeId, overId, ids, todos]);
 
   if (todos.length === 0) {
     return (
@@ -139,6 +160,7 @@ export function TodoList() {
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -164,6 +186,9 @@ export function TodoList() {
       <DragOverlay>
         {activeTodo ? (
           <div className={styles.dragGhost}>
+            {previewTime !== null && (
+              <span className={styles.dragGhostTime}>{formatTime(previewTime)}</span>
+            )}
             <span className={styles.dragGhostText}>{activeTodo.text || '(내용 없음)'}</span>
           </div>
         ) : null}
