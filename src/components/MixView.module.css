@@ -36,8 +36,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  /* 위 카드의 margin-bottom(8px)을 음수 마진으로 상쇄 → 위/아래 여백을 1px로 통일 */
-  margin: -7px 0 1px;
+  /* 위 카드의 margin-bottom(8px)을 음수 마진으로 상쇄 → 위/아래 여백을 4px로 통일 */
+  margin: -4px 0 4px;
 }
 
 .sectionLabel {
@@ -64,29 +64,25 @@
   margin-bottom: 8px;
 }
 
-/* 자식카드가 뒤따르는 부모 카드: 하단 여백 제거, 앞에 배치 (모서리 유지) */
-.eventRow:has(+ .subItem) {
-  margin-bottom: 0;
+/* 하위 일정은 각자 wrapper(.subRow)로 감싸므로, 간격은 .subItem이 아니라 wrapper 기준으로 제어.
+   (그림자 제외, 카드 경계박스 간격 기준) */
+.subRow {
+  position: relative;
+}
+
+/* 부모 카드 → 첫 하위: 1px (하위그룹과 붙음) */
+.eventRow:has(+ .subRow) {
+  margin-bottom: 1px;
   z-index: 3;
 }
 
-/* 부모 카드 바로 뒤 첫 자식 */
-.eventRow + .subItem {
-  margin-top: 0;
+/* 하위 ↔ 하위: 1px */
+.subRow + .subRow {
+  margin-top: 1px;
 }
 
-/* 자식 사이 간격 */
-.subItem + .subItem {
-  margin-top: 3px;
-}
-
-/* 다음 자식이 있는 자식 */
-.subItem:has(+ .subItem) {
-  margin-bottom: 0;
-}
-
-/* 마지막 자식: 다음 그룹과의 간격 */
-.subItem:not(:has(+ .subItem)) {
+/* 하위 그룹 마지막 → 다음 카드: 8px 분리 */
+.subRow:last-child {
   margin-bottom: 8px;
 }
 
@@ -289,9 +285,8 @@
   align-items: center;
   gap: 10px;
   padding: 5px 12px 5px 8px;
-  margin-top: 2px;
-  margin-bottom: 2px;
-  margin-left: 36px;
+  /* 상하 간격은 wrapper(.subRow)에서 제어 → 여기선 0, 들여쓰기(좌 36)만 유지 */
+  margin: 0 0 0 36px;
   background-color: #FFFFFF;
   border-radius: var(--radius-md, 8px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);

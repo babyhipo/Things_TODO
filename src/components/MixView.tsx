@@ -266,7 +266,7 @@ export function MixView({ day }: MixViewProps) {
                 const deleteProgressSub = Math.min(1, -swipeOffsetSub / 72);
                 const moveProgressSub   = Math.min(1, swipeOffsetSub / 72);
                 return (
-                <div key={child.id} style={{ position: 'relative' }}>
+                <div key={child.id} className={styles.subRow}>
                   {isSwipingSub && swipeOffsetSub < -12 && (
                     <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressSub }}>×</div>
                   )}
