@@ -591,7 +591,8 @@
 .nowBadge {
   background: #EF4444;
   color: #FFFFFF;
-  font-size: 12px;
+  /* 카드 시간 텍스트와 동일 크기 */
+  font-size: var(--card-text);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
