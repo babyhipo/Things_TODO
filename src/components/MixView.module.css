@@ -10,8 +10,8 @@
 /* ── 타임라인 ── */
 .timeline {
   position: relative;
-  padding: 0 8px;
-  /* 좌우 여백 8/8 대칭 → 카드를 우측으로 넓힘. 세로선은 좌측 기준이라 영향 없음 */
+  padding: 0 12px;
+  /* 카드 좌우 여백 12/12 통일. 세로선은 좌측 기준이라 영향 없음 */
 }
 
 /*
@@ -614,7 +614,8 @@
 /* ── 갭 ── */
 .gapRow {
   position: relative;
-  margin-bottom: 12px;
+  /* 토글 하단 여백을 상단(위 카드 여백 8px)과 동일하게 통일 */
+  margin-bottom: 8px;
 }
 
 .gapLine {
