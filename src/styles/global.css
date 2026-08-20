@@ -15,15 +15,15 @@
 
   --font-family-base: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", Roboto, sans-serif;
 
-  /* 전체 텍스트 약 1.1배 확대 (기존값 주석) */
-  --font-size-xs: 13px;   /* 12 */
-  --font-size-sm: 15px;   /* 14 */
-  --font-size-md: 17.5px; /* 16 */
-  --font-size-lg: 20px;   /* 18 */
-  --font-size-xl: 24px;   /* 22 */
+  /* 폰트 크기 (2026-07 1.1배 확대 → 되돌림) */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
 
-  /* 일정카드 내부 텍스트 통일 크기 (기존 기본 11px × 1.1) */
-  --card-text: 12px;
+  /* 일정카드 내부 텍스트 통일 크기 (1.1배 이전 기본 11px로 복원) */
+  --card-text: 11px;
 
   --space-1: 4px;
   --space-2: 8px;
