@@ -10,8 +10,8 @@
 /* ── 타임라인 ── */
 .timeline {
   position: relative;
-  padding: 0 16px 0 8px;
-  /* 왼쪽 여백을 줄여 시간 열·체크박스·세로선을 전체적으로 왼쪽으로 */
+  padding: 0 8px;
+  /* 좌우 여백 8/8 대칭 → 카드를 우측으로 넓힘. 세로선은 좌측 기준이라 영향 없음 */
 }
 
 /*
@@ -36,7 +36,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 1px 0 1px;
+  /* 위 카드의 margin-bottom(8px)을 음수 마진으로 상쇄 → 위/아래 여백을 1px로 통일 */
+  margin: -7px 0 1px;
 }
 
 .sectionLabel {
@@ -104,7 +105,7 @@
   background-color: var(--color-bg-card, #FFFFFF);
   border-radius: var(--radius-md, 8px);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding: 3px 12px 3px 10px;
+  padding: 3px 8px 3px 10px;
   display: flex;
   align-items: center;
   gap: 10px;

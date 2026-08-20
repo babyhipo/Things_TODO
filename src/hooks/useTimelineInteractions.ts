@@ -274,7 +274,9 @@ export function useTimelineInteractions(day: DayKey) {
 
   // ── 스와이프 시작 ──
   const handleSwipeStart = (e: React.PointerEvent, todoId: string) => {
-    if ((e.target as Element).closest('button')) return;
+    // 카드/하위항목 어느 지점(텍스트·체크박스 포함)에서도 좌우 스와이프가 시작되게 한다.
+    // 탭은 이동이 없어 삭제/이동이 발동하지 않고 클릭(편집·완료)만 실행됨.
+    // 드래그 핸들은 자체 onPointerDown에서 stopPropagation 하므로 여기로 오지 않는다.
     const ds: SwipeState = { todoId, startX: e.clientX, startY: e.clientY, currentX: e.clientX, direction: 'undecided' };
     setSwipe(ds);
     swipeRef.current = ds;
