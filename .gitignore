@@ -17,6 +17,15 @@ prd.md
 docs/
 CLAUDE.md
 
+# 비밀/자격증명 — 절대 커밋 금지 (공개 저장소)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*credential*
+*secret*
+
 # 로컬 도구/설정 (공개 저장소 비노출)
 .claude/
 .claire/
