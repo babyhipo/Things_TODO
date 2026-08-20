@@ -600,6 +600,8 @@
   box-shadow: 0 1px 6px rgba(239, 68, 68, 0.3);
   white-space: nowrap;
   line-height: 1.4;
+  /* 배지 텍스트 우측을 카드 시간 텍스트 우측(정렬선)과 맞춤: 우측 padding(5px)만큼 오른쪽으로 */
+  transform: translateX(5px);
 }
 
 .nowLine {
