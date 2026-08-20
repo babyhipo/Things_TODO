@@ -175,8 +175,8 @@
 
 .checkboxInner {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border: 1.5px solid var(--color-text-muted, #8A8A82);
   border-radius: 50%;
   background-color: transparent;
