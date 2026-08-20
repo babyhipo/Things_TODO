@@ -26,12 +26,15 @@ function App() {
 
   return (
     <AppShell
-      header={<FolderTabs activeTab={activeTab} onChange={(tab) => setStoreDay(tab)} />}
+      header={
+        <>
+          <FolderTabs activeTab={activeTab} onChange={(tab) => setStoreDay(tab)} />
+          <ListToolbar day={activeStoreDay} />
+        </>
+      }
       footer={<TodoInput onTemplateClick={() => setTemplateOpen(true)} />}
       contentInset={52}
     >
-      <ListToolbar day={activeStoreDay} />
-
       {contentView === 'mix' ? (
         <MixView day={activeStoreDay} />
       ) : (

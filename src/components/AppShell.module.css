@@ -1,7 +1,7 @@
 .outer {
   display: flex;
   justify-content: center;
-  min-height: 100vh;
+  height: 100%;
   background-color: var(--color-bg-outer);
 }
 
@@ -9,7 +9,7 @@
   position: relative;
   width: 100%;
   max-width: var(--app-max-width);
-  min-height: 100vh;
+  height: 100%;
   background-color: var(--color-bg);
   display: flex;
   flex-direction: column;
@@ -58,6 +58,6 @@
 
 @media (min-width: 640px) {
   .app {
-    min-height: 100vh;
+    height: 100%;
   }
 }

@@ -54,6 +54,8 @@
 html,
 body {
   height: 100%;
+  /* 문서 자체는 스크롤 금지 → 상단 탭·기능바·입력바 고정, 내용(.main)만 스크롤 */
+  overflow: hidden;
 }
 
 html {
@@ -74,7 +76,7 @@ body {
 }
 
 #root {
-  min-height: 100vh;
+  height: 100%;
 }
 
 h1, h2, h3, h4, h5, h6 {
