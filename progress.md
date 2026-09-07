@@ -242,16 +242,30 @@
     postcss 8.5.16→8.5.28. 전부 락파일만 변경, package.json 무변경, 빌드 결과물 해시 동일.
   · **2단계 — vitest 2.1.9 → 3.2.7**(오너 확인 후 진행). critical(GHSA-5xrq-8626-4rwp,
     vitest UI 서버 임의 파일 읽기/실행) 해소. **테스트 코드 수정 0건**으로 110개 그대로 통과.
-    함께 vite 5.4.10 → 5.4.21(동일 메이저 내 패치)이 되면서 vite 자체 취약점 3건도 해소.
+    함께 vite 5.4.10 → 5.4.21(동일 메이저 내 패치)도 올라감(단, vite 자체 취약점은 미해소 — 아래 정정).
   **검증**: 매 단계 110 tests green · lint clean · build 결과물 해시 동일
   (index-D_EJM9y2.css / index-DshnnVov.js) · clean `npm ci` → test → build(CI와 동일 순서) 통과 ·
   개발 서버 앱 렌더 정상, 콘솔 에러 0.
 - **중요 발견**: CLAUDE.md의 "Vitest v2 위로 올리지 말 것" 제약은 **v4 기준**이었음(v4는 vite
   ^6/7/8 요구 → vite 메이저 업그레이드 강제 → `npm ci` 깨짐). **v3는 vite ^5를 공식 지원**하므로
   해당 없음. CLAUDE.md 규칙을 "Vite 5 + Vitest 3 유지, Vitest 4 금지"로 갱신함.
-- **남은 취약점 2건**: esbuild(moderate) → vite(high). 개발 서버 한정 문제이고
+- **남은 취약점: GitHub 경고 4건**(vite 3건 + esbuild 1건). 개발 서버 한정 문제이고
   (`npm run dev` 실행 중 악성 사이트가 개발 서버를 조회 가능), **배포된 GitHub Pages 정적
-  사이트에는 영향 없음**(vite/esbuild가 거기서 실행되지 않음). 해소하려면 vite 5 → 8 메이저
-  업그레이드 필요 — 오너가 "검사기만 교체"를 선택해 이번 세션에서는 보류.
+  사이트에는 영향 없음**(vite/esbuild가 거기서 실행되지 않음). 4건 중 2건은 윈도우 전용이라
+  맥에서는 해당 없음. 해소하려면 vite 5 → 8 메이저 업그레이드 필요 — 오너가 "검사기만 교체"를
+  선택해 이번 세션에서는 보류.
 - **Blocked**: 없음.
 - **Next**: 오너 로컬 확인 후 푸시(커밋 5개, 미푸시). 필요 시 별도 세션에서 vite 5 → 8 검토.
+
+### 정정 (같은 날, 푸시 후 확인)
+- 커밋 `fd502d1`의 메시지와 위 기록에 **"vite 5.4.21로 올라가며 vite 자체 취약점 3건 해소"**라고
+  적었으나 **사실이 아님**. `npm audit` 요약 화면이 vite 항목을 esbuild 하위로 접어 표시해
+  해결된 것으로 오독함. `npm audit --json` 및 GitHub Dependabot API로 재확인한 결과, vite의
+  3건(경로 순회 .map / launch-editor NTLM / server.fs.deny 우회)은 **모두 유효**하며
+  **vite 6.4.3 이상**에서 수정됨 — vite 5 계열에는 백포트되지 않았음. 커밋 메시지는 이미 푸시돼
+  있어 히스토리를 고치지 않고 여기에 정정만 남김.
+- **실제 결과: GitHub 경고 9 → 4건**(해결: js-yaml·brace-expansion·nanoid·postcss·vitest(critical) /
+  잔여: vite 3건 + esbuild 1건). `npm audit`의 "2건"은 **패키지 수**, GitHub의 "4건"은
+  **취약점 건수** — 세는 기준이 달라서 생긴 차이이며 둘 다 같은 상태를 가리킴.
+- 결론은 불변: 잔여 4건은 개발 서버 한정(그중 2건은 윈도우 전용)이라 배포본 무관, 해소하려면
+  vite 5 → 8 필요. **배포 자체는 성공**(run 34125366373, GitHub 서버에서 npm ci → test → build 통과).
