@@ -7,6 +7,8 @@ import {
   calcTimeFromY,
   calcDragTime,
   calcDragInsertBeforeId,
+  isDragOverUnscheduled,
+  SECTION_MARKS,
   type CardAnchor,
   type DragState,
 } from './timelineMath';
@@ -149,5 +151,58 @@ describe('getInsertionBeforeIdByTime — 제안 시간 기준 삽입 위치', ()
 describe('calcTimeFromY — 미지정 카드의 Y→시간', () => {
   it('앵커가 없고 맨 위면 하루 시작(새벽 4시=240분)', () => {
     expect(calcTimeFromY(0, [], 0, 100)).toBe(240);
+  });
+});
+
+describe('isDragOverUnscheduled — 타임라인 아래 = 시간 해제 구역', () => {
+  const base: DragState = {
+    todoId: 'a',
+    initialCardCenterY: 100,
+    cardHeight: 40,
+    currentY: 100,
+    anchors: [],
+    containerTop: 50,
+    containerBottom: 300,
+    containerLeft: 0,
+    grabOffset: 0,
+  };
+
+  it('타임라인 안쪽이면 false', () => {
+    expect(isDragOverUnscheduled({ ...base, currentY: 299 })).toBe(false);
+  });
+
+  it('타임라인 아래로 내려가면 true', () => {
+    expect(isDragOverUnscheduled({ ...base, currentY: 301 })).toBe(true);
+  });
+});
+
+describe('SECTION_MARKS — 구분선', () => {
+  it("'자정'(가상 1440분) 구분선이 저녁 뒤에 있다", () => {
+    expect(SECTION_MARKS.map((m) => m.label)).toEqual(['오후', '저녁', '자정']);
+    expect(SECTION_MARKS[2].virtMin).toBe(1440);
+  });
+});
+
+describe('calcDragTime — 구분선 앵커(감도 완화)', () => {
+  it('저녁~자정 구분선 사이에서는 그 사이 시간으로 보간된다', () => {
+    const ds: DragState = {
+      todoId: 'a',
+      initialCardCenterY: 100,
+      cardHeight: 40,
+      currentY: 300, // 저녁(200) 과 자정(400) 의 정확히 중간
+      anchors: [],
+      containerTop: 0,
+      containerBottom: 500,
+      containerLeft: 0,
+      grabOffset: 0,
+      sectionAnchors: [
+        { todoId: '__section-1080__', time: 1080, centerY: 200 }, // 저녁 18:00
+        { todoId: '__section-1440__', time: 1440, centerY: 400 }, // 자정 24:00
+      ],
+    };
+    const t = calcDragTime(ds);
+    expect(t).toBeGreaterThan(1080);
+    expect(t).toBeLessThan(1440);
+    expect(Math.abs(t - 1260)).toBeLessThanOrEqual(30); // 대략 21시 부근
   });
 });

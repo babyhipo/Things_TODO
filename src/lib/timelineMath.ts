@@ -26,6 +26,9 @@ export interface DragState {
   selfAnchor?: CardAnchor;
   // 현재시각 빨간 바(now 라인)도 시간 보간의 waypoint로 사용 (오늘 탭에만 존재).
   nowAnchor?: CardAnchor;
+  // 섹션 구분선(오후/저녁/자정)도 시간 waypoint로 사용 → 카드가 없는 구간에서
+  // 시간이 훅 건너뛰지 않고 구분선 사이로 완만하게 보간된다(감도 완화).
+  sectionAnchors?: CardAnchor[];
 }
 
 /**
@@ -38,6 +41,7 @@ export function calcDragTime(ds: DragState): number {
     ...ds.anchors,
     ...(ds.selfAnchor ? [ds.selfAnchor] : []),
     ...(ds.nowAnchor ? [ds.nowAnchor] : []),
+    ...(ds.sectionAnchors ?? []),
   ].sort((a, b) => a.centerY - b.centerY);
   const { currentY, containerTop, containerBottom } = ds;
 
@@ -85,6 +89,15 @@ export function calcDragTime(ds: DragState): number {
   return snapTo(DAY_START_MIN + 480); // fallback: 12:00
 }
 
+/**
+ * 드래그 중인 카드가 타임라인 아래(= '시간 미지정' 구역)로 내려갔는지.
+ * true면 시간을 보간하지 않고 '시간 지정 해제'로 처리한다.
+ * (예전에는 맨 아래로 내리면 하루 끝 = 새벽 3:59로 등록됐음)
+ */
+export function isDragOverUnscheduled(ds: DragState): boolean {
+  return ds.currentY > ds.containerBottom;
+}
+
 /** 삽입 위치(어느 카드 앞): 포인터 Y 기준 (null이면 맨 뒤) */
 export function calcDragInsertBeforeId(ds: DragState): string | null {
   return getInsertionBeforeId(ds.currentY, ds.anchors);
@@ -126,7 +139,7 @@ export type Segment =
   | { type: 'event'; todo: Todo }
   | { type: 'gap'; fromMin: number; toMin: number; key: string }
   | { type: 'now'; time: number; key: string }
-  | { type: 'section'; label: string; key: string };
+  | { type: 'section'; label: string; key: string; virtMin: number };
 
 // ── 상수 ────────────────────────────────────────────────────
 export const SNAP = 5; // 시간 스냅 단위(분)
@@ -137,6 +150,9 @@ export const DRAG_SNAP_ZONE = 8;
 export const SECTION_MARKS = [
   { virtMin: 12 * 60, label: '오후', key: 'section-pm' },
   { virtMin: 18 * 60, label: '저녁', key: 'section-eve' },
+  // 자정: 저녁~하루 끝 사이가 텅 비면 드래그 시간 조절이 너무 민감해져서
+  // 중간 기준점(앵커) 겸 구분선으로 넣는다. 가상분 1440 = 다음날 00:00
+  { virtMin: 24 * 60, label: '자정', key: 'section-midnight' },
 ];
 
 // ── 계산 함수 ────────────────────────────────────────────────

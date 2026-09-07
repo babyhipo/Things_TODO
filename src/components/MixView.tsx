@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import styles from './MixView.module.css';
 import { formatTime } from '../lib/timeFormatter';
 import type { DayKey } from '../types/todo';
@@ -11,12 +12,12 @@ export function MixView({ day }: MixViewProps) {
   const {
     now, pendingParentId, toggleComplete, setPendingParentId,
     editingId, editDraft, setEditDraft, editInputRef, beginEdit, commitEdit, cancelEdit,
-    scheduled, unscheduled, childrenByParent, segments,
+    scheduled, unscheduled, displayUnscheduled, childrenByParent, segments,
     expandedGaps, toggleGap,
     drag, unscheduledDrag, swipe, subDrag, proposedSubOrder, subDragParentTarget,
     timelineRef, pillRef,
     handleDragStart, handleSwipeStart, handleSubDragStart, handleUnscheduledDragStart,
-    isOverTl, unscheduledProposedTime,
+    isOverTl, unscheduledProposedTime, isDraggingToUnscheduled,
     dragProposedTime,
   } = useTimelineInteractions(day);
 
@@ -47,7 +48,7 @@ export function MixView({ day }: MixViewProps) {
           /* ── 섹션 구분선 (오후 12시 / 저녁 오후 6시) ── */
           if (seg.type === 'section') {
             return (
-              <div key={seg.key} className={styles.sectionDivider}>
+              <div key={seg.key} className={styles.sectionDivider} data-section-min={seg.virtMin}>
                 <span className={styles.sectionLabel}>{seg.label}</span>
                 <div className={styles.sectionLine} />
               </div>
@@ -338,12 +339,14 @@ export function MixView({ day }: MixViewProps) {
         })}
       </div>
 
-      {/* 시간 미지정 */}
-      {unscheduled.length > 0 && (
-        <div className={styles.unscheduled}>
-          <h3 className={styles.unscheduledTitle}>시간 미지정</h3>
+      {/* 시간 미지정 — 일정카드를 여기로 내리면 시간 지정이 해제된다 */}
+      {displayUnscheduled.length > 0 && (
+        <div className={`${styles.unscheduled} ${isDraggingToUnscheduled ? styles.unscheduledDropActive : ''}`}>
+          <h3 className={styles.unscheduledTitle}>
+            {isDraggingToUnscheduled ? '여기에 놓으면 시간 해제' : '시간 미지정'}
+          </h3>
           <div className={styles.unscheduledList}>
-            {unscheduled.map(todo => {
+            {displayUnscheduled.map(todo => {
               // 타임라인 위로 끌어 실제 카드가 타임라인에 삽입돼 있으면 여기선 숨김
               if (isOverTl && unscheduledDrag?.todoId === todo.id) return null;
               const isSwipingU      = swipe?.todoId === todo.id && swipe.direction !== 'v';
@@ -351,8 +354,12 @@ export function MixView({ day }: MixViewProps) {
               const swipeOffsetU    = Math.max(-80, Math.min(80, rawOffsetU));
               const deleteProgressU = Math.min(1, -swipeOffsetU / 72);
               const moveProgressU   = Math.min(1, swipeOffsetU / 72);
+              const unschedChildren = (childrenByParent.get(todo.id) ?? [])
+                .slice()
+                .sort((a, b) => a.order - b.order);
               return (
-                <div key={todo.id} style={{ position: 'relative' }}>
+                <Fragment key={todo.id}>
+                <div style={{ position: 'relative' }}>
                   {isSwipingU && swipeOffsetU < -12 && (
                     <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressU }}>×</div>
                   )}
@@ -360,7 +367,8 @@ export function MixView({ day }: MixViewProps) {
                     <div className={styles.swipeMoveHint} style={{ opacity: moveProgressU }}>→</div>
                   )}
                   <div
-                    className={`${styles.unscheduledItem} ${todo.completed ? styles.unscheduledItemDone : ''} ${unscheduledDrag?.todoId === todo.id ? styles.unscheduledItemDragging : ''}`}
+                    data-unsched-id={todo.id}
+                    className={`${styles.unscheduledItem} ${todo.completed ? styles.unscheduledItemDone : ''} ${(unscheduledDrag?.todoId === todo.id || drag?.todoId === todo.id) ? styles.unscheduledItemDragging : ''}`}
                     onPointerDown={e => handleSwipeStart(e, todo.id)}
                     style={{
                       transform: `translateX(${swipeOffsetU}px)`,
@@ -413,7 +421,7 @@ export function MixView({ day }: MixViewProps) {
                         type="button"
                         className={styles.dragHandle}
                         onPointerDown={e => { e.stopPropagation(); handleUnscheduledDragStart(e, todo); }}
-                        aria-label="드래그로 시간 지정"
+                        aria-label="드래그로 시간 지정 또는 순서 변경"
                         style={{ touchAction: 'none' }}
                       >
                         <span className={styles.handleIcon} aria-hidden="true" />
@@ -421,6 +429,70 @@ export function MixView({ day }: MixViewProps) {
                     )}
                   </div>
                 </div>
+
+                {/* 미지정 카드의 하위일정 — 시간이 해제돼도 하위일정이 사라져 보이지 않게 함.
+                    (순서 변경은 타임라인 기준이라 여기선 손잡이 없이 완료·편집·스와이프만) */}
+                {unschedChildren.map(child => {
+                  const isSwipingC   = swipe?.todoId === child.id && swipe.direction !== 'v';
+                  const rawOffsetC   = isSwipingC ? swipe!.currentX - swipe!.startX : 0;
+                  const swipeOffsetC = Math.max(-80, Math.min(80, rawOffsetC));
+                  return (
+                    <div key={child.id} className={styles.subRow}>
+                      {isSwipingC && swipeOffsetC < -12 && (
+                        <div className={styles.swipeDeleteHint} style={{ opacity: Math.min(1, -swipeOffsetC / 72) }}>×</div>
+                      )}
+                      {isSwipingC && swipeOffsetC > 12 && day === 'today' && !child.completed && (
+                        <div className={styles.swipeMoveHint} style={{ opacity: Math.min(1, swipeOffsetC / 72) }}>→</div>
+                      )}
+                      <div
+                        data-sub-id={child.id}
+                        className={`${styles.subItem} ${child.completed ? styles.subItemDone : ''}`}
+                        onPointerDown={e => handleSwipeStart(e, child.id)}
+                        style={{
+                          transform: `translateX(${swipeOffsetC}px)`,
+                          transition: isSwipingC ? 'none' : 'transform 200ms ease',
+                        }}
+                      >
+                        <span className={styles.subItemArrow} aria-hidden="true">└</span>
+                        <button
+                          type="button"
+                          className={`${styles.subItemCheckbox} ${child.completed ? styles.subItemCheckboxChecked : ''}`}
+                          onClick={() => toggleComplete(day, child.id)}
+                          aria-label={child.completed ? '완료 취소' : '완료 처리'}
+                          role="checkbox"
+                          aria-checked={child.completed}
+                        >
+                          <span className={styles.subItemCheckboxInner} aria-hidden="true" />
+                        </button>
+                        {editingId === child.id ? (
+                          <input
+                            ref={editInputRef}
+                            type="text"
+                            className={styles.editInput}
+                            value={editDraft}
+                            onChange={e => setEditDraft(e.target.value)}
+                            onPointerDown={e => e.stopPropagation()}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') { e.preventDefault(); commitEdit(child.id); }
+                              if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                            }}
+                            onBlur={() => commitEdit(child.id)}
+                            autoComplete="off"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className={`${styles.subItemText} ${child.completed ? styles.subItemTextDone : ''}`}
+                            onClick={() => { if (!child.completed) beginEdit(child); }}
+                          >
+                            {child.text || '(내용 없음)'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                </Fragment>
               );
             })}
           </div>

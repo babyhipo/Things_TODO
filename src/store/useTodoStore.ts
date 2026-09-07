@@ -42,10 +42,12 @@ interface TodoState {
   reorderTemplates: (newOrderIds: string[]) => void;
   createEmptyTemplate: () => string;
   setTodoTime: (day: DayKey, id: string, time: number | null) => void;
+  unscheduleTodo: (day: DayKey, id: string) => void;
   // 시간을 지정하면서 순서까지 함께 확정: beforeId 카드 "바로 앞"에 삽입(null이면 맨 뒤)
   assignTimeAt: (day: DayKey, id: string, time: number, beforeId: string | null) => void;
   setParentId: (day: DayKey, id: string, parentId: string | null) => void;
   reorderSubItems: (day: DayKey, parentId: string, newOrderIds: string[]) => void;
+  reorderUnscheduled: (day: DayKey, newOrderIds: string[]) => void;
 
   performRolloverIfNeeded: () => void;
 }
@@ -453,6 +455,25 @@ export const useTodoStore = create<TodoState>()(
         }));
       },
 
+      // 시간 지정 해제: 카드를 타임라인 아래 '시간 미지정' 구역으로 내렸을 때.
+      // 시간·종료시간을 지우고 순서는 맨 뒤로 → 미지정 목록의 끝에 붙는다.
+      unscheduleTodo: (day, id) => {
+        const target = get().days[day].find((t) => t.id === id);
+        if (!target || target.time === null) return;
+        pushHist(get().days);
+        set((state) => {
+          const list = state.days[day];
+          const maxOrder = list.reduce((m, t) => Math.max(m, t.order), -1);
+          const updated = list.map((t) =>
+            t.id === id ? { ...t, time: null, endTime: null, order: maxOrder + 1 } : t,
+          );
+          return {
+            days: { ...state.days, [day]: densifyOrder(updated) },
+            historyLength: _hist.length,
+          };
+        });
+      },
+
       assignTimeAt: (day, id, time, beforeId) => {
         pushHist(get().days);
         set((state) => {
@@ -557,6 +578,36 @@ export const useTodoStore = create<TodoState>()(
           templates: [...state.templates, { id, name: '새 템플릿', items: [] }],
         }));
         return id;
+      },
+
+      // '시간 미지정' 항목끼리만 순서 변경. 시간 지정 카드의 order는 건드리지 않도록
+      // 미지정 항목들이 이미 차지하고 있는 order 자리(slots)에 새 순서를 다시 배정한다.
+      reorderUnscheduled: (day, newOrderIds) => {
+        const list = get().days[day];
+        const currentIds = list.filter((t) => t.parentId === null && t.time === null).map((t) => t.id);
+        // 구성이 다르면(그 사이 추가/삭제됨) 아무것도 하지 않는다
+        if (currentIds.length !== newOrderIds.length) return;
+        if (!currentIds.every((id) => newOrderIds.includes(id))) return;
+        const slots = list
+          .filter((t) => t.parentId === null && t.time === null)
+          .map((t) => t.order)
+          .sort((a, b) => a - b);
+        const orderById = new Map<string, number>();
+        newOrderIds.forEach((id, i) => orderById.set(id, slots[i]));
+        // 순서가 그대로면 히스토리를 남기지 않는다
+        if (list.every((t) => !orderById.has(t.id) || orderById.get(t.id) === t.order)) return;
+        pushHist(get().days);
+        set((state) => ({
+          days: {
+            ...state.days,
+            [day]: densifyOrder(
+              state.days[day].map((t) =>
+                orderById.has(t.id) ? { ...t, order: orderById.get(t.id)! } : t,
+              ),
+            ),
+          },
+          historyLength: _hist.length,
+        }));
       },
 
       performRolloverIfNeeded: () => {

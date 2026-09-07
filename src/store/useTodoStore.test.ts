@@ -316,6 +316,64 @@ describe('indentTodo / outdentTodo — 하위/상위 이동', () => {
   });
 });
 
+describe('unscheduleTodo — 시간 지정 해제', () => {
+  it('시간·종료시간을 지우고 미지정 목록 맨 뒤로 보낸다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: '회의', time: 840, endTime: 900, order: 0 }),
+          mk({ id: 'b', text: '운동', time: null, order: 1 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().unscheduleTodo('today', 'a');
+    const list = useTodoStore.getState().days.today;
+    const a = list.find((t) => t.id === 'a')!;
+    expect(a).toMatchObject({ time: null, endTime: null });
+    // 미지정끼리는 order 순 → '운동'이 먼저, 해제된 '회의'가 뒤
+    expect([...list].sort((x, y) => x.order - y.order).map((t) => t.text)).toEqual(['운동', '회의']);
+  });
+
+  it('이미 시간이 없는 항목은 아무 변화도 없다(히스토리도 남기지 않음)', () => {
+    useTodoStore.setState({ days: { today: [mk({ id: 'a', text: 'A', time: null, order: 0 })], tomorrow: [] } });
+    const before = useTodoStore.getState().historyLength;
+    store().unscheduleTodo('today', 'a');
+    expect(useTodoStore.getState().historyLength).toBe(before);
+  });
+});
+
+describe('reorderUnscheduled — 시간 미지정 순서 변경', () => {
+  it('미지정 항목끼리 순서를 바꾸고 시간 지정 카드는 건드리지 않는다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 's', text: '회의', time: 840, order: 0 }),
+          mk({ id: 'x', text: 'X', time: null, order: 1 }),
+          mk({ id: 'y', text: 'Y', time: null, order: 2 }),
+          mk({ id: 'z', text: 'Z', time: null, order: 3 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().reorderUnscheduled('today', ['z', 'x', 'y']);
+    const list = [...useTodoStore.getState().days.today].sort((a, b) => a.order - b.order);
+    expect(list.map((t) => t.text)).toEqual(['회의', 'Z', 'X', 'Y']);
+    expect(list.find((t) => t.id === 's')!.time).toBe(840); // 시간 카드는 그대로
+  });
+
+  it('목록 구성이 다르면(그 사이 추가·삭제) 무시한다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [mk({ id: 'x', text: 'X', time: null, order: 0 }), mk({ id: 'y', text: 'Y', time: null, order: 1 })],
+        tomorrow: [],
+      },
+    });
+    store().reorderUnscheduled('today', ['y', 'x', 'ghost']);
+    expect(useTodoStore.getState().days.today.map((t) => t.text)).toEqual(['X', 'Y']);
+  });
+});
+
 describe('performRolloverIfNeeded — 자정(새벽 4시) 넘김', () => {
   it('마지막 넘김 날짜가 과거면 내일 일정을 오늘로 옮기고 완료를 초기화한다', () => {
     useTodoStore.setState({
