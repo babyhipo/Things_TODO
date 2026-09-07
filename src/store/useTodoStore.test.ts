@@ -374,6 +374,92 @@ describe('reorderUnscheduled — 시간 미지정 순서 변경', () => {
   });
 });
 
+describe('makeSubItemOf — 드래그드롭으로 하위일정 편입', () => {
+  it('상위 카드를 다른 카드의 하위로 넣고, 그 카드의 하위일정도 함께 따라간다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: 'A', time: 540, order: 0 }),
+          mk({ id: 'a1', text: 'A-1', parentId: 'a', order: 1 }),
+          mk({ id: 'b', text: 'B', time: 600, order: 2 }),
+          mk({ id: 'b1', text: 'B-1', parentId: 'b', order: 3 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().makeSubItemOf('today', 'b', 'a'); // B를 A의 하위로
+    const list = [...useTodoStore.getState().days.today].sort((x, y) => x.order - y.order);
+    expect(list.map((t) => t.text)).toEqual(['A', 'A-1', 'B', 'B-1']);
+    // B와 B-1 모두 A의 하위(2단계는 만들지 않음)
+    expect(list.find((t) => t.id === 'b')!.parentId).toBe('a');
+    expect(list.find((t) => t.id === 'b1')!.parentId).toBe('a');
+  });
+
+  it('하위일정의 하위로는 넣지 않는다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: 'A', time: 540, order: 0 }),
+          mk({ id: 'a1', text: 'A-1', parentId: 'a', order: 1 }),
+          mk({ id: 'b', text: 'B', time: 600, order: 2 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().makeSubItemOf('today', 'b', 'a1'); // 하위(A-1) 밑으로 → 무시
+    expect(useTodoStore.getState().days.today.find((t) => t.id === 'b')!.parentId).toBeNull();
+  });
+
+  it('다른 부모의 하위일정으로 옮길 수 있다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: 'A', time: 540, order: 0 }),
+          mk({ id: 'a1', text: 'A-1', parentId: 'a', order: 1 }),
+          mk({ id: 'b', text: 'B', time: 600, order: 2 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().makeSubItemOf('today', 'a1', 'b');
+    const list = [...useTodoStore.getState().days.today].sort((x, y) => x.order - y.order);
+    expect(list.map((t) => t.text)).toEqual(['A', 'B', 'A-1']);
+    expect(list.find((t) => t.id === 'a1')!.parentId).toBe('b');
+  });
+});
+
+describe('하위일정 → 상위 일정 승격', () => {
+  it('미지정 구역으로 내리면(unscheduleTodo) 부모에서 빠져나와 시간 없는 상위가 된다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: 'A', time: 540, order: 0 }),
+          mk({ id: 'a1', text: 'A-1', parentId: 'a', order: 1 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().unscheduleTodo('today', 'a1');
+    const a1 = useTodoStore.getState().days.today.find((t) => t.id === 'a1')!;
+    expect(a1).toMatchObject({ parentId: null, time: null });
+  });
+
+  it('타임라인 위에 놓으면(assignTimeAt) 그 시간의 상위 카드가 된다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: 'A', time: 540, order: 0 }),
+          mk({ id: 'a1', text: 'A-1', parentId: 'a', order: 1 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().assignTimeAt('today', 'a1', 720, null);
+    const a1 = useTodoStore.getState().days.today.find((t) => t.id === 'a1')!;
+    expect(a1).toMatchObject({ parentId: null, time: 720 });
+  });
+});
+
 describe('performRolloverIfNeeded — 자정(새벽 4시) 넘김', () => {
   it('마지막 넘김 날짜가 과거면 내일 일정을 오늘로 옮기고 완료를 초기화한다', () => {
     useTodoStore.setState({

@@ -17,7 +17,8 @@ export function MixView({ day }: MixViewProps) {
     drag, unscheduledDrag, swipe, subDrag, proposedSubOrder, subDragParentTarget,
     timelineRef, pillRef,
     handleDragStart, handleSwipeStart, handleSubDragStart, handleUnscheduledDragStart,
-    isOverTl, unscheduledProposedTime, isDraggingToUnscheduled,
+    isOverTl, unscheduledProposedTime,
+    unscheduledDropHint, promotingSubId, dragIndentOffset,
     dragProposedTime,
   } = useTimelineInteractions(day);
 
@@ -146,8 +147,9 @@ export function MixView({ day }: MixViewProps) {
                 className={`${styles.card} ${lifted ? styles.cardDragging : ''} ${todo.endTime != null ? styles.cardRange : ''} ${isSelected ? styles.cardSelected : ''} ${isSubDropTarget ? styles.cardSubDropTarget : ''}`}
                 onPointerDown={e => handleSwipeStart(e, todo.id)}
                 style={{
-                  transform: `translateX(${swipeOffset}px)`,
-                  transition: isSwipingThis ? 'none' : 'transform 200ms ease, box-shadow 150ms',
+                  // 드래그로 하위 편입 중이면 오른쪽으로 들여쓰기 미리보기
+                  transform: `translateX(${isDragging ? dragIndentOffset : swipeOffset}px)`,
+                  transition: isSwipingThis || isDragging ? 'none' : 'transform 200ms ease, box-shadow 150ms',
                 }}
               >
                 {/* 드래그 중: 카드 왼쪽에 시간 알약(+짧은 선)을 붙여 이 카드의 시간으로 표시 */}
@@ -259,7 +261,7 @@ export function MixView({ day }: MixViewProps) {
           return (
             <div key={todo.id}>
               {card}
-              {!isDragging && !isPlacing && displayChildren.map(child => {
+              {!isDragging && !isPlacing && displayChildren.filter(c => c.id !== promotingSubId).map(child => {
                 // 부모카드와 동일한 스와이프(왼쪽 삭제 / 오른쪽 내일 이동) 계산
                 const isSwipingSub  = swipe?.todoId === child.id && swipe.direction !== 'v';
                 const rawOffsetSub  = isSwipingSub ? swipe!.currentX - swipe!.startX : 0;
@@ -341,9 +343,9 @@ export function MixView({ day }: MixViewProps) {
 
       {/* 시간 미지정 — 일정카드를 여기로 내리면 시간 지정이 해제된다 */}
       {displayUnscheduled.length > 0 && (
-        <div className={`${styles.unscheduled} ${isDraggingToUnscheduled ? styles.unscheduledDropActive : ''}`}>
+        <div className={`${styles.unscheduled} ${unscheduledDropHint ? styles.unscheduledDropActive : ''}`}>
           <h3 className={styles.unscheduledTitle}>
-            {isDraggingToUnscheduled ? '여기에 놓으면 시간 해제' : '시간 미지정'}
+            {unscheduledDropHint ?? '시간 미지정'}
           </h3>
           <div className={styles.unscheduledList}>
             {displayUnscheduled.map(todo => {

@@ -16,6 +16,8 @@ import {
   calcDragTime,
   calcDragInsertBeforeId,
   isDragOverUnscheduled,
+  isDemoteGesture,
+  DRAG_DEMOTE_DX,
   type CardAnchor,
   type DragState,
   type SwipeState,
@@ -40,7 +42,7 @@ export function useTimelineInteractions(day: DayKey) {
   const updateTodoText     = useTodoStore((s) => s.updateTodoText);
   const assignTimeAt       = useTodoStore((s) => s.assignTimeAt);
   const unscheduleTodo     = useTodoStore((s) => s.unscheduleTodo);
-  const setParentId        = useTodoStore((s) => s.setParentId);
+  const makeSubItemOf      = useTodoStore((s) => s.makeSubItemOf);
   const reorderSubItems    = useTodoStore((s) => s.reorderSubItems);
   const reorderUnscheduled = useTodoStore((s) => s.reorderUnscheduled);
   const pendingParentId    = useTodoStore((s) => s.pendingParentId);
@@ -99,6 +101,9 @@ export function useTimelineInteractions(day: DayKey) {
   const [proposedUnschedOrder, setProposedUnschedOrder] = useState<string[] | null>(null);
   const proposedUnschedOrderRef = useRef<string[] | null>(null);
   const lastUnschedOrderRef     = useRef<string | null>(null);
+  // 하위일정을 상위 일정으로 승격하는 중인지: 'timed'(타임라인 위) | 'unscheduled'(미지정 구역)
+  const [subPromote, setSubPromote] = useState<'timed' | 'unscheduled' | null>(null);
+  const subPromoteRef = useRef<'timed' | 'unscheduled' | null>(null);
   const [subDragParentTarget, setSubDragParentTarget] = useState<string | null>(null);
   const subDragParentTargetRef = useRef<string | null>(null);
   const lastSnapRef        = useRef<number | null>(null);
@@ -136,6 +141,8 @@ export function useTimelineInteractions(day: DayKey) {
   const displayScheduled = useMemo(() => {
     // 1) 시간지정 카드 드래그: 잡은 카드를 목표 위치로 재배치
     if (drag) {
+      // 다른 카드의 하위로 편입 대기 중이면 타임라인은 그대로 두고 대상 카드만 강조한다
+      if (subDragParentTarget) return scheduled;
       const dragged = scheduled.find(t => t.id === drag.todoId);
       if (!dragged) return scheduled;
       // 타임라인 아래('시간 미지정' 구역)로 내렸으면 타임라인에서 빼둔다
@@ -167,8 +174,21 @@ export function useTimelineInteractions(day: DayKey) {
         }
       }
     }
+    // 3) 하위일정을 타임라인 위로 끌어 상위 일정으로 승격 중: 목표 슬롯에 실제 카드로 삽입
+    if (subDrag && subPromote === 'timed' && subDragParentTarget === null) {
+      const dragged = (childrenByParent.get(subDrag.parentId) ?? []).find(c => c.id === subDrag.todoId);
+      if (dragged) {
+        const t = calcTimeFromY(subDrag.currentY, subDrag.anchors, subDrag.timelineTop, subDrag.timelineBottom);
+        const beforeId = getInsertionBeforeId(subDrag.currentY, subDrag.anchors);
+        const clone = { ...dragged, time: fromVirt(t) };
+        const idx = beforeId == null ? scheduled.length : scheduled.findIndex(sc => sc.id === beforeId);
+        const out = [...scheduled];
+        out.splice(idx < 0 ? scheduled.length : idx, 0, clone);
+        return out;
+      }
+    }
     return scheduled;
-  }, [scheduled, drag, unscheduledDrag, subDragParentTarget, unscheduled]);
+  }, [scheduled, drag, unscheduledDrag, subDragParentTarget, unscheduled, subDrag, subPromote, childrenByParent]);
 
   // ── 세그먼트: 이벤트/갭/현재시각/섹션 구분선 ──
   const segments = useMemo<Segment[]>(() => {
@@ -279,6 +299,8 @@ export function useTimelineInteractions(day: DayKey) {
 
     const ds: DragState = {
       todoId: todo.id,
+      startX: e.clientX,
+      currentX: e.clientX,
       initialCardCenterY: selfCenterY,
       cardHeight: er ? er.height + 8 : 44, // +8 = margin-bottom
       currentY: selfCenterY, // 보정: 시작은 카드 중심 = 원래 시간
@@ -423,7 +445,30 @@ export function useTimelineInteractions(day: DayKey) {
       const ds = dragRef.current;
       if (ds) {
         const y = e.clientY - ds.grabOffset; // 누른 지점 보정
-        const dsNow = { ...ds, currentY: y };
+        const dsNow = { ...ds, currentY: y, currentX: e.clientX };
+        // 오른쪽으로 충분히 밀면서 다른 카드 위에 있으면 → 그 카드의 하위일정으로 편입
+        let demote: string | null = null;
+        if (isDemoteGesture(dsNow)) {
+          for (const t of scheduled) {
+            if (t.id === ds.todoId) continue;
+            const el = cardEl(t.id);
+            if (!el) continue;
+            const rect = el.getBoundingClientRect();
+            if (e.clientY >= rect.top + rect.height * 0.2 && e.clientY <= rect.bottom - rect.height * 0.2) {
+              demote = t.id;
+              break;
+            }
+          }
+        }
+        if (subDragParentTargetRef.current !== demote) {
+          subDragParentTargetRef.current = demote;
+          setSubDragParentTarget(demote);
+          if (demote) hapticReorder(cardEl(demote));
+        }
+        if (demote) {
+          setDrag(prev => prev ? { ...prev, currentY: e.clientY - prev.grabOffset, currentX: e.clientX } : null);
+          return;
+        }
         const overUnsched = isDragOverUnscheduled(dsNow);
         if (overUnsched !== lastUnschedRef.current) {
           hapticTick(cardEl(ds.todoId));       // 시간 해제 구역 진입/이탈
@@ -439,11 +484,21 @@ export function useTimelineInteractions(day: DayKey) {
           }
         }
       }
-      setDrag(prev => prev ? { ...prev, currentY: e.clientY - prev.grabOffset } : null);
+      setDrag(prev => prev ? { ...prev, currentY: e.clientY - prev.grabOffset, currentX: e.clientX } : null);
     };
     const onEnd = () => {
       const ds = dragRef.current;
       if (!ds) return;
+      const demoteTarget = subDragParentTargetRef.current;
+      if (demoteTarget) {
+        // 다른 카드 위에 놓음 → 그 카드의 하위일정으로 편입
+        hapticDrop(cardEl(demoteTarget));
+        makeSubItemOf(day, ds.todoId, demoteTarget);
+        subDragParentTargetRef.current = null;
+        setSubDragParentTarget(null);
+        setDrag(null);
+        return;
+      }
       if (isDragOverUnscheduled(ds)) {
         // '시간 미지정' 구역에 내림 → 시간 지정 해제 (예전엔 새벽 4시로 등록됐음)
         hapticDrop(cardEl(ds.todoId));
@@ -464,7 +519,7 @@ export function useTimelineInteractions(day: DayKey) {
       window.removeEventListener('pointercancel', onEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!drag, day, assignTimeAt, unscheduleTodo]);
+  }, [!!drag, day, assignTimeAt, unscheduleTodo, makeSubItemOf, scheduled]);
 
   // ── 언스케줄 드래그 이동·종료 (카드 위 → 하위일정 편입 / 빈 타임라인 → 시간 부여) ──
   useEffect(() => {
@@ -545,7 +600,7 @@ export function useTimelineInteractions(day: DayKey) {
       if (target) {
         // 카드 위에 드롭 → 그 카드의 하위일정으로 편입
         hapticDrop(cardEl(target));
-        setParentId(day, ds.todoId, target);
+        makeSubItemOf(day, ds.todoId, target);
       } else {
         const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
         if (overTl) {
@@ -576,7 +631,7 @@ export function useTimelineInteractions(day: DayKey) {
       window.removeEventListener('pointercancel', onEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!unscheduledDrag, day, assignTimeAt, setParentId, reorderUnscheduled]);
+  }, [!!unscheduledDrag, day, assignTimeAt, makeSubItemOf, reorderUnscheduled]);
 
   // ── 하위 일정 드래그: 부모 변경 or 형제 순서 변경 ──
   useEffect(() => {
@@ -605,11 +660,42 @@ export function useTimelineInteractions(day: DayKey) {
       }
       subDragParentTargetRef.current = found;
       setSubDragParentTarget(found);
+      if (found && subPromoteRef.current) {
+        subPromoteRef.current = null;
+        setSubPromote(null);
+      }
 
-      // 같은 부모 내 형제 순서 계산
       if (!found) {
         const ds = subDragRef.current;
         if (!ds) return;
+
+        const setPromote = (mode: 'timed' | 'unscheduled' | null) => {
+          if (subPromoteRef.current === mode) return;
+          subPromoteRef.current = mode;
+          setSubPromote(mode);
+          if (mode) hapticTick(subEl(ds.todoId));
+        };
+
+        // 1) 타임라인 아래(미지정 구역) → 시간 없는 상위 일정으로 승격
+        if (e.clientY > ds.timelineBottom) {
+          setPromote('unscheduled');
+          setProposedSubOrder(null);
+          proposedSubOrderRef.current = null;
+          return;
+        }
+        // 2) 자기 부모 묶음 밖의 타임라인 위 → 그 위치의 시간을 가진 상위 일정으로 승격
+        const parentEl = cardEl(ds.parentId) ?? unschedEl(ds.parentId);
+        const groupTop = parentEl?.getBoundingClientRect().top ?? -Infinity;
+        const lastSib  = subEl(ds.siblingIds[ds.siblingIds.length - 1]);
+        const groupBottom = (lastSib?.getBoundingClientRect().bottom ?? Infinity) + 8;
+        if (e.clientY < groupTop || e.clientY > groupBottom) {
+          setPromote('timed');
+          setProposedSubOrder(null);
+          proposedSubOrderRef.current = null;
+          return;
+        }
+        // 3) 부모 묶음 안 → 기존대로 형제 순서 변경
+        setPromote(null);
         const others = ds.siblingIds.filter(id => id !== ds.todoId);
         const positions = others.map(id => {
           const el = document.querySelector<HTMLElement>(`[data-sub-id="${id}"]`);
@@ -640,9 +726,20 @@ export function useTimelineInteractions(day: DayKey) {
       const ds = subDragRef.current;
       if (!ds) return;
       const target = subDragParentTargetRef.current;
+      const promote = subPromoteRef.current;
       if (target) {
+        // 다른 카드 위 → 그 카드의 하위일정으로 이동
         hapticDrop(cardEl(target));
-        setParentId(day, ds.todoId, target);
+        makeSubItemOf(day, ds.todoId, target);
+      } else if (promote === 'unscheduled') {
+        // 미지정 구역 → 시간 없는 상위 일정으로 승격
+        hapticDrop(subEl(ds.todoId));
+        unscheduleTodo(day, ds.todoId);
+      } else if (promote === 'timed') {
+        // 타임라인 위 → 그 위치의 시간을 가진 상위 일정으로 승격
+        const t = calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
+        hapticDrop(subEl(ds.todoId));
+        assignTimeAt(day, ds.todoId, fromVirt(t), getInsertionBeforeIdByTime(t, ds.anchors));
       } else {
         const order = proposedSubOrderRef.current;
         if (order && order.length > 1) {
@@ -656,6 +753,8 @@ export function useTimelineInteractions(day: DayKey) {
       setSubDragParentTarget(null);
       setProposedSubOrder(null);
       proposedSubOrderRef.current = null;
+      setSubPromote(null);
+      subPromoteRef.current = null;
     };
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerup', onEnd);
@@ -666,7 +765,7 @@ export function useTimelineInteractions(day: DayKey) {
       window.removeEventListener('pointercancel', onEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!subDrag, day, setParentId, reorderSubItems]);
+  }, [!!subDrag, day, makeSubItemOf, reorderSubItems, unscheduleTodo, assignTimeAt]);
 
   // ── 파생값 ──
   // 드래그 중 표시할 제안 시간(가상분) — 일정카드 시간 텍스트에 반영
@@ -688,6 +787,11 @@ export function useTimelineInteractions(day: DayKey) {
       const dragged = scheduled.find(t => t.id === drag.todoId);
       return dragged ? [...unscheduled, dragged] : unscheduled;
     }
+    // 1-2) 하위일정을 미지정 구역으로 끌어내려 상위 승격 대기 중
+    if (subDrag && subPromote === 'unscheduled') {
+      const dragged = (childrenByParent.get(subDrag.parentId) ?? []).find(c => c.id === subDrag.todoId);
+      return dragged ? [...unscheduled, dragged] : unscheduled;
+    }
     // 2) 미지정 항목 순서 변경 중 → 제안 순서로 미리 배치
     if (unscheduledDrag && proposedUnschedOrder) {
       const idx = (id: string) => {
@@ -697,7 +801,19 @@ export function useTimelineInteractions(day: DayKey) {
       return [...unscheduled].sort((a, b) => idx(a.id) - idx(b.id));
     }
     return unscheduled;
-  }, [unscheduled, scheduled, drag, isDraggingToUnscheduled, unscheduledDrag, proposedUnschedOrder]);
+  }, [unscheduled, scheduled, drag, isDraggingToUnscheduled, unscheduledDrag, proposedUnschedOrder, subDrag, subPromote, childrenByParent]);
+
+  // 미지정 구역 안내 문구 (일정카드=시간 해제 / 하위일정=상위로 승격)
+  const unscheduledDropHint =
+    isDraggingToUnscheduled ? '여기에 놓으면 시간 해제'
+    : (subDrag && subPromote === 'unscheduled') ? '여기에 놓으면 상위 일정으로'
+    : null;
+  // 승격 중인 하위일정은 원래 자리(부모 아래)에서 숨긴다 — 두 번 보이지 않게
+  const promotingSubId = subDrag && subPromote ? subDrag.todoId : null;
+  // 하위 편입 제스처(오른쪽으로 밀기) 중인 카드의 들여쓰기 미리보기 오프셋
+  const dragIndentOffset = (drag && subDragParentTarget && drag.startX !== undefined && drag.currentX !== undefined)
+    ? Math.min(40, Math.max(0, drag.currentX - drag.startX - DRAG_DEMOTE_DX + 12))
+    : 0;
 
   // 빈 타임라인 안내 문구용 제안 시간
   const unscheduledProposedTime = (unscheduledDrag && isOverTl)
@@ -721,6 +837,7 @@ export function useTimelineInteractions(day: DayKey) {
     handleDragStart, handleSwipeStart, handleSubDragStart, handleUnscheduledDragStart,
     // 파생값
     isOverTl, unscheduledProposedTime, isDraggingToUnscheduled,
+    unscheduledDropHint, promotingSubId, dragIndentOffset,
     dragProposedTime,
   };
 }

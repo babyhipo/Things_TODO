@@ -46,6 +46,7 @@ interface TodoState {
   // 시간을 지정하면서 순서까지 함께 확정: beforeId 카드 "바로 앞"에 삽입(null이면 맨 뒤)
   assignTimeAt: (day: DayKey, id: string, time: number, beforeId: string | null) => void;
   setParentId: (day: DayKey, id: string, parentId: string | null) => void;
+  makeSubItemOf: (day: DayKey, id: string, newParentId: string) => void;
   reorderSubItems: (day: DayKey, parentId: string, newOrderIds: string[]) => void;
   reorderUnscheduled: (day: DayKey, newOrderIds: string[]) => void;
 
@@ -455,17 +456,21 @@ export const useTodoStore = create<TodoState>()(
         }));
       },
 
-      // 시간 지정 해제: 카드를 타임라인 아래 '시간 미지정' 구역으로 내렸을 때.
+      // 타임라인 아래 '시간 미지정' 구역에 내렸을 때: 시간 지정 해제 + 최상위로 승격.
       // 시간·종료시간을 지우고 순서는 맨 뒤로 → 미지정 목록의 끝에 붙는다.
+      // (하위일정을 여기로 끌어내리면 부모에서 빠져나와 미지정 상위 일정이 된다)
       unscheduleTodo: (day, id) => {
         const target = get().days[day].find((t) => t.id === id);
-        if (!target || target.time === null) return;
+        if (!target) return;
+        if (target.time === null && target.parentId === null) return; // 이미 미지정 상위
         pushHist(get().days);
         set((state) => {
           const list = state.days[day];
           const maxOrder = list.reduce((m, t) => Math.max(m, t.order), -1);
           const updated = list.map((t) =>
-            t.id === id ? { ...t, time: null, endTime: null, order: maxOrder + 1 } : t,
+            t.id === id
+              ? { ...t, time: null, endTime: null, parentId: null, order: maxOrder + 1 }
+              : t,
           );
           return {
             days: { ...state.days, [day]: densifyOrder(updated) },
@@ -532,6 +537,40 @@ export const useTodoStore = create<TodoState>()(
           },
           historyLength: _hist.length,
         }));
+      },
+
+      // 드래그드롭으로 다른 카드의 하위일정으로 편입한다.
+      // 옮기는 카드에 하위일정이 있으면 함께 새 부모 아래로 평탄화(하위는 1단계만 유지).
+      makeSubItemOf: (day, id, newParentId) => {
+        const list = get().days[day];
+        const moved  = list.find((t) => t.id === id);
+        const parent = list.find((t) => t.id === newParentId);
+        if (!moved || !parent) return;
+        if (id === newParentId) return;
+        if (parent.parentId !== null) return;       // 하위의 하위는 만들지 않는다
+        if (parent.parentId === id) return;         // 자기 하위 밑으로는 못 들어감
+        if (moved.parentId === newParentId) return; // 이미 그 카드의 하위
+        pushHist(get().days);
+        set((state) => {
+          const cur = [...state.days[day]].sort((a, b) => a.order - b.order);
+          const movingIds = new Set<string>([
+            id,
+            ...cur.filter((t) => t.parentId === id).map((t) => t.id),
+          ]);
+          const movingGroup = cur
+            .filter((t) => movingIds.has(t.id))
+            .map((t) => ({ ...t, parentId: newParentId }));
+          const rest = cur.filter((t) => !movingIds.has(t.id));
+          // 새 부모의 기존 하위일정 뒤에 붙인다
+          const parentIdx = rest.findIndex((t) => t.id === newParentId);
+          let insertAt = parentIdx + 1;
+          while (insertAt < rest.length && rest[insertAt].parentId === newParentId) insertAt += 1;
+          const out = [...rest.slice(0, insertAt), ...movingGroup, ...rest.slice(insertAt)];
+          return {
+            days: { ...state.days, [day]: out.map((t, i) => ({ ...t, order: i })) },
+            historyLength: _hist.length,
+          };
+        });
       },
 
       reorderSubItems: (day, parentId, newOrderIds) => {
