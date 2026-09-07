@@ -223,3 +223,14 @@
   (삭제·내일로), 콘솔 에러 없음.
 - **Note**: 완료된 하위일정은 손잡이가 비활성이라 그 위에서 끌면 스와이프로 처리됨(기존과 동일).
 - **Next**: `useTimelineInteractions`(847줄) 훅 분리는 오너와 다시 논의 후 진행.
+
+## 2026-09-07 (9세션: 배포)
+- **Done**: 전체 점검 후 origin/main 푸시 → GitHub Actions 자동 배포 성공(run 34123802200).
+  점검 항목: 워킹트리 클린 / lint·tsc·110 tests green / `npm ci --dry-run` 락파일 동기화 확인 /
+  비공개 파일(prd.md·docs/·CLAUDE.md·.env) 미추적 확인 / 실사용 흐름 스모크(일정 추가·하위 추가·
+  미루기·되돌리기) / 콘솔 에러 0.
+  배포본(https://babyhipo.github.io/Things_TODO/) 확인: 상단바·'미루기' 버튼·자정 구분선 정상,
+  일정 추가 동작 정상. 푸시한 커밋 8개(기능 3 + 수정 3 + 리팩토링 2).
+- **Note**: 푸시 시 GitHub이 dependabot 취약점 9건(critical 1) 경고. 별도 세션에서 안전한 것부터
+  하나씩(Vitest v2 / Vite 5 고정 주의).
+- **Next**: 아이폰 실기기에서 이번 변경들(하위↔상위 드래그, 좌우 밀기 편입, 상단바 고정) 체감 확인.
