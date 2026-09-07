@@ -4,6 +4,7 @@ import { formatTime } from '../lib/timeFormatter';
 import type { DayKey } from '../types/todo';
 import { toVirt } from '../lib/dayBoundary';
 import { eventColor, getSwipeVisual } from '../lib/timelineMath';
+import { SubItemRow } from './SubItemRow';
 import { useTimelineInteractions } from '../hooks/useTimelineInteractions';
 
 interface MixViewProps { day: DayKey; }
@@ -258,80 +259,27 @@ export function MixView({ day }: MixViewProps) {
           return (
             <div key={todo.id}>
               {card}
-              {!isDragging && !isPlacing && displayChildren.filter(c => c.id !== promotingSubId).map(child => {
-                // 부모카드와 동일한 스와이프(왼쪽 삭제 / 오른쪽 내일 이동) 계산
-                const {
-                  active: isSwipingSub, offset: swipeOffsetSub,
-                  deleteProgress: deleteProgressSub, moveProgress: moveProgressSub,
-                } = getSwipeVisual(swipe, child.id);
-                return (
-                <div key={child.id} className={styles.subRow}>
-                  {isSwipingSub && swipeOffsetSub < -12 && (
-                    <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressSub }}>×</div>
-                  )}
-                  {isSwipingSub && swipeOffsetSub > 12 && day === 'today' && !child.completed && (
-                    <div className={styles.swipeMoveHint} style={{ opacity: moveProgressSub }}>→</div>
-                  )}
-                  <div
-                    data-sub-id={child.id}
-                    className={`${styles.subItem} ${child.completed ? styles.subItemDone : ''} ${subDrag?.todoId === child.id ? styles.subItemDragging : ''}`}
-                    onPointerDown={e => handleSwipeStart(e, child.id)}
-                    style={{
-                      transform: `translateX(${swipeOffsetSub}px)`,
-                      transition: isSwipingSub ? 'none' : 'transform 200ms ease',
-                    }}
-                  >
-                    <span className={styles.subItemArrow} aria-hidden="true">└</span>
-                    {/* 체크박스 (시간 바로 우측) */}
-                    <button
-                      type="button"
-                      className={`${styles.subItemCheckbox} ${child.completed ? styles.subItemCheckboxChecked : ''}`}
-                      onClick={() => toggleComplete(day, child.id)}
-                      aria-label={child.completed ? '완료 취소' : '완료 처리'}
-                      role="checkbox"
-                      aria-checked={child.completed}
-                    >
-                      <span className={styles.subItemCheckboxInner} aria-hidden="true" />
-                    </button>
-                    {/* 텍스트: 클릭 시 편집 (부모카드와 동일) */}
-                    {editingId === child.id ? (
-                      <input
-                        ref={editInputRef}
-                        type="text"
-                        className={styles.editInput}
-                        value={editDraft}
-                        onChange={e => setEditDraft(e.target.value)}
-                        onPointerDown={e => e.stopPropagation()}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') { e.preventDefault(); commitEdit(child.id); }
-                          if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
-                        }}
-                        onBlur={() => commitEdit(child.id)}
-                        autoComplete="off"
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        className={`${styles.subItemText} ${child.completed ? styles.subItemTextDone : ''}`}
-                        onClick={() => { if (!child.completed) beginEdit(child); }}
-                      >
-                        {child.text || '(내용 없음)'}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className={styles.subItemHandle}
-                      onPointerDown={!child.completed ? (e => { e.stopPropagation(); handleSubDragStart(e, child); }) : undefined}
-                      aria-label="드래그로 이동"
-                      disabled={child.completed}
-                      style={{ touchAction: 'none' }}
-                    >
-                      <span className={styles.handleIcon} aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-                );
-              })}
+              {!isDragging && !isPlacing && displayChildren
+                .filter(c => c.id !== promotingSubId)
+                .map(child => (
+                  <SubItemRow
+                    key={child.id}
+                    child={child}
+                    day={day}
+                    swipe={swipe}
+                    onSwipeStart={handleSwipeStart}
+                    onToggle={id => toggleComplete(day, id)}
+                    dragging={subDrag?.todoId === child.id}
+                    onDragStart={handleSubDragStart}
+                    editingId={editingId}
+                    editDraft={editDraft}
+                    setEditDraft={setEditDraft}
+                    editInputRef={editInputRef}
+                    beginEdit={beginEdit}
+                    commitEdit={commitEdit}
+                    cancelEdit={cancelEdit}
+                  />
+                ))}
             </div>
           );
         })}
@@ -427,69 +375,26 @@ export function MixView({ day }: MixViewProps) {
                   </div>
                 </div>
 
-                {/* 미지정 카드의 하위일정 — 시간이 해제돼도 하위일정이 사라져 보이지 않게 함.
-                    (순서 변경은 타임라인 기준이라 여기선 손잡이 없이 완료·편집·스와이프만) */}
-                {unschedChildren.map(child => {
-                  const {
-                    active: isSwipingC, offset: swipeOffsetC,
-                    deleteProgress: deleteProgressC, moveProgress: moveProgressC,
-                  } = getSwipeVisual(swipe, child.id);
-                  return (
-                    <div key={child.id} className={styles.subRow}>
-                      {isSwipingC && swipeOffsetC < -12 && (
-                        <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressC }}>×</div>
-                      )}
-                      {isSwipingC && swipeOffsetC > 12 && day === 'today' && !child.completed && (
-                        <div className={styles.swipeMoveHint} style={{ opacity: moveProgressC }}>→</div>
-                      )}
-                      <div
-                        data-sub-id={child.id}
-                        className={`${styles.subItem} ${child.completed ? styles.subItemDone : ''}`}
-                        onPointerDown={e => handleSwipeStart(e, child.id)}
-                        style={{
-                          transform: `translateX(${swipeOffsetC}px)`,
-                          transition: isSwipingC ? 'none' : 'transform 200ms ease',
-                        }}
-                      >
-                        <span className={styles.subItemArrow} aria-hidden="true">└</span>
-                        <button
-                          type="button"
-                          className={`${styles.subItemCheckbox} ${child.completed ? styles.subItemCheckboxChecked : ''}`}
-                          onClick={() => toggleComplete(day, child.id)}
-                          aria-label={child.completed ? '완료 취소' : '완료 처리'}
-                          role="checkbox"
-                          aria-checked={child.completed}
-                        >
-                          <span className={styles.subItemCheckboxInner} aria-hidden="true" />
-                        </button>
-                        {editingId === child.id ? (
-                          <input
-                            ref={editInputRef}
-                            type="text"
-                            className={styles.editInput}
-                            value={editDraft}
-                            onChange={e => setEditDraft(e.target.value)}
-                            onPointerDown={e => e.stopPropagation()}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') { e.preventDefault(); commitEdit(child.id); }
-                              if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
-                            }}
-                            onBlur={() => commitEdit(child.id)}
-                            autoComplete="off"
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            className={`${styles.subItemText} ${child.completed ? styles.subItemTextDone : ''}`}
-                            onClick={() => { if (!child.completed) beginEdit(child); }}
-                          >
-                            {child.text || '(내용 없음)'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {/* 미지정 카드의 하위일정 — 시간이 해제돼도 하위일정이 화면에서 사라지지 않게 함 */}
+                {unschedChildren.map(child => (
+                  <SubItemRow
+                    key={child.id}
+                    child={child}
+                    day={day}
+                    swipe={swipe}
+                    onSwipeStart={handleSwipeStart}
+                    onToggle={id => toggleComplete(day, id)}
+                    dragging={subDrag?.todoId === child.id}
+                    onDragStart={handleSubDragStart}
+                    editingId={editingId}
+                    editDraft={editDraft}
+                    setEditDraft={setEditDraft}
+                    editInputRef={editInputRef}
+                    beginEdit={beginEdit}
+                    commitEdit={commitEdit}
+                    cancelEdit={cancelEdit}
+                  />
+                ))}
                 </Fragment>
               );
             })}

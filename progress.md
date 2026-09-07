@@ -207,3 +207,19 @@
 - **Next(오너 확인 대기)**: ① 미사용 컴포넌트 3개(DayTabs·BottomNav·DateHeader) + AppShell의
   bottomNav 분기 삭제 ② 하위일정 JSX 중복(타임라인/미지정) 공용 컴포넌트로 추출
   ③ useTimelineInteractions(847줄) 기능별 훅 분리.
+
+## 2026-09-07 (8세션: 리팩토링 2차 — 오너 승인분)
+- **Done**: 오너 승인 2건 진행(훅 분리는 보류).
+  · **미사용 컴포넌트 3개 삭제**: DayTabs·BottomNav·DateHeader(+각 CSS). AppShell의 `bottomNav`
+    prop 분기와 `.bottomNav` 클래스, `--bottom-nav-height` 변수도 함께 제거 → AppShell의 하단
+    계산이 '입력 바 + 안전영역'만 남아 단순해짐.
+  · **하위일정 JSX 중복 추출**: 타임라인/미지정 두 곳에 복사돼 있던 하위일정 UI를
+    `src/components/SubItemRow.tsx` 하나로 통합(스타일은 MixView.module.css 공유).
+    손잡이 유무를 `onDragStart` 유무로 제어. 그 결과 **미지정 카드의 하위일정에도 손잡이가 생겨**
+    순서변경·부모변경·승격이 타임라인 하위일정과 동일하게 동작.
+    MixView 505 → 406줄.
+  **110 tests green, lint/build clean.** 브라우저 회귀: 하위 렌더(손잡이 포함)·클릭 편집·체크박스,
+  형제 순서변경, 미지정 하위→다른 카드로 부모변경(신규), 하위→미지정 승격, 하위 좌/우 스와이프
+  (삭제·내일로), 콘솔 에러 없음.
+- **Note**: 완료된 하위일정은 손잡이가 비활성이라 그 위에서 끌면 스와이프로 처리됨(기존과 동일).
+- **Next**: `useTimelineInteractions`(847줄) 훅 분리는 오너와 다시 논의 후 진행.
