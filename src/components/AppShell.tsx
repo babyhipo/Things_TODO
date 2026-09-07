@@ -1,8 +1,15 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import styles from './AppShell.module.css';
 
-function useKeyboardInset(): number {
-  const [inset, setInset] = useState(0);
+interface ViewportInsets {
+  /** 화면 아래쪽에서 키보드가 차지한 높이(px) */
+  keyboardInset: number;
+  /** 사파리가 페이지를 위로 끌어올린 양(px) — 이만큼 헤더를 내려 제자리에 붙여둔다 */
+  offsetTop: number;
+}
+
+function useViewportInsets(): ViewportInsets {
+  const [insets, setInsets] = useState<ViewportInsets>({ keyboardInset: 0, offsetTop: 0 });
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -10,7 +17,11 @@ function useKeyboardInset(): number {
 
     const update = () => {
       const gap = window.innerHeight - vv.height - vv.offsetTop;
-      setInset(Math.max(0, gap));
+      const next = { keyboardInset: Math.max(0, gap), offsetTop: Math.max(0, vv.offsetTop) };
+      // 스크롤 이벤트가 잦으므로 값이 실제로 바뀔 때만 다시 그린다
+      setInsets(prev =>
+        prev.keyboardInset === next.keyboardInset && prev.offsetTop === next.offsetTop ? prev : next,
+      );
     };
 
     vv.addEventListener('resize', update);
@@ -23,7 +34,7 @@ function useKeyboardInset(): number {
     };
   }, []);
 
-  return inset;
+  return insets;
 }
 
 interface AppShellProps {
@@ -35,7 +46,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ header, children, footer, bottomNav, contentInset = 0 }: AppShellProps) {
-  const keyboardInset = useKeyboardInset();
+  const { keyboardInset, offsetTop } = useViewportInsets();
   const keyboardOpen = keyboardInset > 0;
 
   // 입력 바는 화면 맨 아래(bottom: 0)에 붙이고, 하단 안전영역만큼은 입력 바 자신이
@@ -52,7 +63,15 @@ export function AppShell({ header, children, footer, bottomNav, contentInset = 0
   return (
     <div className={styles.outer}>
       <div className={styles.app}>
-        {header ? <header className={styles.header}>{header}</header> : null}
+        {header ? (
+          <header
+            className={styles.header}
+            // 페이지가 위로 밀린 만큼 되돌려, 어떤 상황에서도 상단바가 화면 맨 위에 붙어 있게 한다
+            style={offsetTop > 0 ? { transform: `translateY(${offsetTop}px)` } : undefined}
+          >
+            {header}
+          </header>
+        ) : null}
 
         <main
           className={styles.main}

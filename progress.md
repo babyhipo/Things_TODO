@@ -177,3 +177,17 @@
   마지막 카드도 바에 가리지 않고 끝까지 스크롤됨. 105 tests green, lint/build clean.
 - **Blocked**: 없음.
 - **Next**: 실기기(아이폰)에서 최종 확인. 미푸시.
+
+## 2026-09-07 (6세션: 구분선 여백 1px · 상단바 완전 고정)
+- **Done**:
+  (1) 섹션 구분선(오후/저녁/자정) 상단 여백 1px 추가 — `.sectionDivider` margin-top -4px → -3px.
+  (2) **상단바(날짜 탭 + 기능바) 완전 고정.** 본문(.main)만 스크롤되므로 목록 스크롤로는 원래
+  움직이지 않았고, 문제는 iOS 사파리가 입력창 포커스 때 페이지 자체를 위로 끌어올리는 경우였음.
+  · `body`를 `position: fixed`로 고정해 문서가 밀려날 여지를 없앰.
+  · 그래도 밀리는 경우를 대비해 AppShell이 `visualViewport.offsetTop`만큼 헤더를 `translateY`로
+    되돌림(기존 `useKeyboardInset` → `useViewportInsets`로 확장, 값이 바뀔 때만 리렌더).
+  **검증**: 목록 끝까지 스크롤해도 헤더 top=0 유지 / 페이지가 40px 밀린 상황을 흉내내면 헤더에
+  `translateY(40px)`가 붙어 화면 맨 위 유지 / 키보드(336px)+페이지밀림(28px) 동시 상황에서도
+  헤더는 보이는 화면 맨 위, 입력 바는 키보드 바로 위. 105 tests green, lint/build clean.
+- **Blocked**: 없음.
+- **Next**: 실기기에서 키보드 올릴 때 상단바 확인. 미푸시.

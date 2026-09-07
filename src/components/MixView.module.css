@@ -38,8 +38,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  /* 위 카드의 margin-bottom(8px)을 음수 마진으로 상쇄 → 위/아래 여백을 4px로 통일 */
-  margin: -4px 0 4px;
+  /* 위 카드의 margin-bottom(8px)을 음수 마진으로 상쇄 → 아래 4px, 위는 5px */
+  margin: -3px 0 4px;
 }
 
 .sectionLabel {
