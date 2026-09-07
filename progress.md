@@ -234,3 +234,24 @@
 - **Note**: 푸시 시 GitHub이 dependabot 취약점 9건(critical 1) 경고. 별도 세션에서 안전한 것부터
   하나씩(Vitest v2 / Vite 5 고정 주의).
 - **Next**: 아이폰 실기기에서 이번 변경들(하위↔상위 드래그, 좌우 밀기 편입, 상단바 고정) 체감 확인.
+
+## 2026-09-07 (10세션: Dependabot 취약점 정리 9 → 2건)
+- **Done**: 의존성 보안 취약점을 **한 건씩** 업데이트(매 단계 test/lint/build 확인 후 개별 커밋).
+  · **1단계 — 안전한 전이 의존성 4건**(직접 설치한 게 아니라 도구가 내부에서 쓰는 부품):
+    js-yaml 4.3.0→4.3.2 / brace-expansion 1.1.14→1.1.18·5.0.7→5.0.9 / nanoid 3.3.15→3.3.18 /
+    postcss 8.5.16→8.5.28. 전부 락파일만 변경, package.json 무변경, 빌드 결과물 해시 동일.
+  · **2단계 — vitest 2.1.9 → 3.2.7**(오너 확인 후 진행). critical(GHSA-5xrq-8626-4rwp,
+    vitest UI 서버 임의 파일 읽기/실행) 해소. **테스트 코드 수정 0건**으로 110개 그대로 통과.
+    함께 vite 5.4.10 → 5.4.21(동일 메이저 내 패치)이 되면서 vite 자체 취약점 3건도 해소.
+  **검증**: 매 단계 110 tests green · lint clean · build 결과물 해시 동일
+  (index-D_EJM9y2.css / index-DshnnVov.js) · clean `npm ci` → test → build(CI와 동일 순서) 통과 ·
+  개발 서버 앱 렌더 정상, 콘솔 에러 0.
+- **중요 발견**: CLAUDE.md의 "Vitest v2 위로 올리지 말 것" 제약은 **v4 기준**이었음(v4는 vite
+  ^6/7/8 요구 → vite 메이저 업그레이드 강제 → `npm ci` 깨짐). **v3는 vite ^5를 공식 지원**하므로
+  해당 없음. CLAUDE.md 규칙을 "Vite 5 + Vitest 3 유지, Vitest 4 금지"로 갱신함.
+- **남은 취약점 2건**: esbuild(moderate) → vite(high). 개발 서버 한정 문제이고
+  (`npm run dev` 실행 중 악성 사이트가 개발 서버를 조회 가능), **배포된 GitHub Pages 정적
+  사이트에는 영향 없음**(vite/esbuild가 거기서 실행되지 않음). 해소하려면 vite 5 → 8 메이저
+  업그레이드 필요 — 오너가 "검사기만 교체"를 선택해 이번 세션에서는 보류.
+- **Blocked**: 없음.
+- **Next**: 오너 로컬 확인 후 푸시(커밋 5개, 미푸시). 필요 시 별도 세션에서 vite 5 → 8 검토.
