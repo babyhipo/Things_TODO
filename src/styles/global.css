@@ -38,6 +38,11 @@
   --radius-lg: 12px;
 
   --app-max-width: 420px;
+
+  /* 홈 인디케이터 등 하단 안전영역 높이.
+     env()를 변수로 감싸두면 기기별 값이 그대로 쓰이면서, 브라우저 검증 시에는
+     이 변수만 바꿔 아이폰 환경을 흉내 낼 수 있다. */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 *,

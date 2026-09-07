@@ -164,3 +164,16 @@
   필요 없어 모바일에서 그대로 사용 가능.
 - **Blocked**: 없음.
 - **Next**: 실기기에서 40px 체감(오발동 잦으면 `DRAG_DEMOTE_DX` 상향). 미푸시.
+
+## 2026-09-07 (5세션: 입력 바 아래 안전영역 틈 수정)
+- **Done**: 아이폰 하단 홈 인디케이터 영역(safe-area) 틈으로 스크롤 중인 일정카드가 비쳐 보이던 문제 수정.
+  원인: 입력 바(footer)가 `bottom: env(safe-area-inset-bottom)`으로 **떠 있어** 그 아래 약 34px 띠가
+  비었는데, 본문(.main)은 화면 맨 아래까지 이어져 카드가 그 틈에 그대로 보였음.
+  수정: 입력 바를 `bottom: 0`에 붙이고 안전영역만큼은 **입력 바 자신의 padding-bottom**으로 덮는다
+  (키보드가 올라오면 padding 0 — 그 아래는 키보드가 가림). `env(safe-area-inset-bottom)`을
+  `--safe-bottom` 변수로 감싸 AppShell·ViewToggle에서 함께 사용 → 브라우저에서 변수만 34px로 바꿔
+  아이폰 환경을 재현·검증할 수 있게 됨.
+  **검증(--safe-bottom: 34px)**: 입력 바 하단 = 화면 하단(틈 0), 바 아래로 보이는 카드 0개,
+  마지막 카드도 바에 가리지 않고 끝까지 스크롤됨. 105 tests green, lint/build clean.
+- **Blocked**: 없음.
+- **Next**: 실기기(아이폰)에서 최종 확인. 미푸시.

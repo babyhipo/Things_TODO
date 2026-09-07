@@ -38,11 +38,16 @@ export function AppShell({ header, children, footer, bottomNav, contentInset = 0
   const keyboardInset = useKeyboardInset();
   const keyboardOpen = keyboardInset > 0;
 
+  // 입력 바는 화면 맨 아래(bottom: 0)에 붙이고, 하단 안전영역만큼은 입력 바 자신이
+  // 여백으로 덮는다. 예전처럼 bottom을 안전영역만큼 띄우면 그 아래 틈으로
+  // 스크롤 중인 일정카드가 비쳐 보였다.
   const footerBottom = keyboardOpen
     ? `${keyboardInset}px`
     : bottomNav
-      ? 'calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom))'
-      : 'env(safe-area-inset-bottom)';
+      ? 'calc(var(--bottom-nav-height, 64px) + var(--safe-bottom))'
+      : '0px';
+  // 키보드가 올라와 있거나 하단 네비가 있으면 그 아래는 이미 가려지므로 여백 불필요
+  const footerPadBottom = keyboardOpen || bottomNav ? '0px' : 'var(--safe-bottom)';
 
   return (
     <div className={styles.outer}>
@@ -56,7 +61,7 @@ export function AppShell({ header, children, footer, bottomNav, contentInset = 0
               ${bottomNav ? 'var(--bottom-nav-height, 64px)' : '0px'}
               + ${footer ? '68px' : '0px'}
               + ${contentInset > 0 ? `${contentInset}px` : '0px'}
-              + env(safe-area-inset-bottom)
+              + var(--safe-bottom)
             )`,
           }}
         >
@@ -66,7 +71,11 @@ export function AppShell({ header, children, footer, bottomNav, contentInset = 0
         {footer ? (
           <div
             className={styles.footer}
-            style={{ bottom: footerBottom, transition: 'bottom 80ms ease-out' }}
+            style={{
+              bottom: footerBottom,
+              paddingBottom: footerPadBottom,
+              transition: 'bottom 80ms ease-out',
+            }}
           >
             {footer}
           </div>
