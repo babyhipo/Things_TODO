@@ -98,3 +98,23 @@
 .dedupBtn:disabled {
   opacity: 0.35;
 }
+
+/* '미루기' — 미완료 일정 전부를 내일로 (오른쪽 스와이프의 일괄 버전) */
+.pushBtn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm, 4px);
+  transition: color 120ms ease, background-color 120ms ease;
+  letter-spacing: -0.2px;
+}
+
+.pushBtn:not(:disabled):active {
+  color: #7C3AED; /* 스와이프 '내일로' 힌트와 같은 보라 */
+  background-color: #F3EEFF;
+}
+
+.pushBtn:disabled {
+  opacity: 0.35;
+}

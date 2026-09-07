@@ -223,6 +223,84 @@ describe('moveTodoToTomorrow — 내일로 넘기기', () => {
   });
 });
 
+describe('moveIncompleteToTomorrow — 미완료 일정 전부 내일로 미루기', () => {
+  it('미완료 카드만 시간 그대로 내일로 옮기고, 완료 카드는 오늘에 남긴다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: '기상', time: 480, completed: true, order: 0 }),
+          mk({ id: 'b', text: '회의', time: 840, endTime: 900, order: 1 }),
+          mk({ id: 'c', text: '운동', time: null, order: 2 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().moveIncompleteToTomorrow('today');
+    const s = useTodoStore.getState();
+    expect(s.days.today.map((t) => t.text)).toEqual(['기상']);
+    expect(s.days.tomorrow.map((t) => t.text)).toEqual(['회의', '운동']);
+    expect(s.days.tomorrow[0]).toMatchObject({ time: 840, endTime: 900, completed: false });
+    expect(s.days.tomorrow[1].time).toBeNull();
+  });
+
+  it('미완료 부모의 하위일정도 함께 옮기고 완료 상태를 초기화한다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'p', text: '부모', time: 600, order: 0 }),
+          mk({ id: 'c1', text: '자식1', parentId: 'p', completed: true, order: 1 }),
+          mk({ id: 'c2', text: '자식2', parentId: 'p', order: 2 }),
+        ],
+        tomorrow: [],
+      },
+    });
+    store().moveIncompleteToTomorrow('today');
+    const s = useTodoStore.getState();
+    expect(s.days.today).toHaveLength(0);
+    expect(s.days.tomorrow).toHaveLength(3);
+    const parent = s.days.tomorrow.find((t) => t.parentId === null)!;
+    const kids = s.days.tomorrow.filter((t) => t.parentId === parent.id);
+    expect(kids.map((t) => t.text)).toEqual(['자식1', '자식2']);
+    expect(kids.every((t) => !t.completed)).toBe(true);
+  });
+
+  it('기존 내일 일정 뒤에 이어 붙고, 오늘 순서를 유지한다', () => {
+    useTodoStore.setState({
+      days: {
+        today: [
+          mk({ id: 'a', text: 'A', order: 0 }),
+          mk({ id: 'b', text: 'B', order: 1 }),
+        ],
+        tomorrow: [mk({ id: 'z', text: '기존', order: 0 })],
+      },
+    });
+    store().moveIncompleteToTomorrow('today');
+    const s = useTodoStore.getState();
+    expect(s.days.tomorrow.map((t) => t.text)).toEqual(['기존', 'A', 'B']);
+    expect(s.days.tomorrow.map((t) => t.order)).toEqual([0, 1, 2]);
+  });
+
+  it('내일 탭에서는 아무 일도 하지 않는다', () => {
+    useTodoStore.setState({
+      days: { today: [], tomorrow: [mk({ id: 'a', text: 'A', order: 0 })] },
+    });
+    store().moveIncompleteToTomorrow('tomorrow');
+    expect(useTodoStore.getState().days.tomorrow).toHaveLength(1);
+  });
+
+  it('되돌리기(undo)로 미루기 직전 상태로 복구된다', () => {
+    useTodoStore.setState({
+      days: { today: [mk({ id: 'a', text: 'A', time: 480, order: 0 })], tomorrow: [] },
+    });
+    store().moveIncompleteToTomorrow('today');
+    expect(useTodoStore.getState().days.today).toHaveLength(0);
+    store().undo();
+    const s = useTodoStore.getState();
+    expect(s.days.today.map((t) => t.text)).toEqual(['A']);
+    expect(s.days.tomorrow).toHaveLength(0);
+  });
+});
+
 describe('indentTodo / outdentTodo — 하위/상위 이동', () => {
   it('바로 위 항목의 하위로 넣었다가 다시 최상위로 뺀다', () => {
     useTodoStore.setState({

@@ -27,6 +27,10 @@
 .main {
   flex: 1 1 auto;
   overflow-y: auto;
+  /* 가로는 스크롤되지 않게 고정.
+     overflow-y만 auto로 두면 CSS 규칙상 overflow-x도 auto가 되어,
+     카드를 오른쪽으로 스와이프할 때 화면 전체가 가로로 밀리는 문제가 있었음 */
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   background-color: #FFFFFF;
   --color-bg: #FFFFFF;

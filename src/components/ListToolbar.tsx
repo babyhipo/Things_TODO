@@ -2,6 +2,7 @@ import { useState } from 'react';
 import styles from './ListToolbar.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import { fireConfetti } from '../lib/useConfetti';
+import { hapticDrop } from '../lib/haptics';
 import type { DayKey } from '../types/todo';
 
 interface ListToolbarProps {
@@ -31,6 +32,7 @@ function UndoIcon() {
 
 export function ListToolbar({ day }: ListToolbarProps) {
   const clearDay       = useTodoStore((s) => s.clearDay);
+  const moveIncompleteToTomorrow = useTodoStore((s) => s.moveIncompleteToTomorrow);
   const deduplicateDay = useTodoStore((s) => s.deduplicateDay);
   const undo           = useTodoStore((s) => s.undo);
   const historyLength  = useTodoStore((s) => s.historyLength);
@@ -46,6 +48,15 @@ export function ListToolbar({ day }: ListToolbarProps) {
       return false;
     });
   })();
+
+  // 미완료 최상위 카드가 하나라도 있어야 '미루기'가 의미 있음 (내일 탭에선 항상 비활성)
+  const hasIncomplete = day === 'today' && todos.some((t) => t.parentId === null && !t.completed);
+
+  const handlePush = () => {
+    if (!hasIncomplete) return;
+    hapticDrop();
+    moveIncompleteToTomorrow(day);
+  };
 
   const handleClap = () => {
     if (clapping) return;
@@ -73,6 +84,15 @@ export function ListToolbar({ day }: ListToolbarProps) {
         aria-label="되돌리기"
       >
         <UndoIcon />
+      </button>
+      <button
+        type="button"
+        className={styles.pushBtn}
+        onClick={handlePush}
+        disabled={!hasIncomplete}
+        aria-label="미완료 일정 전부 내일로 미루기"
+      >
+        미루기
       </button>
       <button
         type="button"

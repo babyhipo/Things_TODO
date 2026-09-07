@@ -25,6 +25,7 @@ interface TodoState {
   toggleComplete: (day: DayKey, id: string) => void;
   deleteTodo: (day: DayKey, id: string) => void;
   moveTodoToTomorrow: (day: DayKey, id: string) => void;
+  moveIncompleteToTomorrow: (day: DayKey) => void;
 
   reorderTodos: (day: DayKey, newOrderIds: string[], movedId: string) => void;
   clearDay: (day: DayKey) => void;
@@ -227,6 +228,57 @@ export const useTodoStore = create<TodoState>()(
             })),
           ];
           const remaining = state.days[day].filter((t) => t.id !== id && t.parentId !== id);
+          return {
+            days: {
+              ...state.days,
+              [day]: densifyOrder(remaining),
+              tomorrow: densifyOrder([...state.days.tomorrow, ...moved]),
+            },
+            historyLength: _hist.length,
+          };
+        });
+      },
+
+      // 미완료 일정 전부를 같은 시간대 그대로 내일로 옮긴다(상단 '미루기' 버튼).
+      // 규칙은 카드 오른쪽 스와이프와 동일: 미완료 최상위 카드 + 그 하위일정을 함께 옮기고
+      // 완료 상태는 초기화. 완료된 카드는 오늘에 그대로 남는다.
+      moveIncompleteToTomorrow: (day) => {
+        if (day !== 'today') return; // 내일 탭에서는 미룰 곳이 없음
+        const targets = get().days[day]
+          .filter((t) => t.parentId === null && !t.completed)
+          .sort((a, b) => a.order - b.order);
+        if (targets.length === 0) return;
+        pushHist(get().days);
+        set((state) => {
+          const src = state.days[day];
+          const base = state.days.tomorrow.length;
+          const moved: Todo[] = [];
+          const movedIds = new Set<string>();
+          targets.forEach((todo) => {
+            const children = src
+              .filter((t) => t.parentId === todo.id)
+              .sort((a, b) => a.order - b.order);
+            const newParentId = newId();
+            moved.push({
+              ...todo,
+              id: newParentId,
+              parentId: null,
+              completed: false,
+              order: base + moved.length,
+            });
+            movedIds.add(todo.id);
+            children.forEach((c) => {
+              moved.push({
+                ...c,
+                id: newId(),
+                parentId: newParentId,
+                completed: false,
+                order: base + moved.length,
+              });
+              movedIds.add(c.id);
+            });
+          });
+          const remaining = src.filter((t) => !movedIds.has(t.id));
           return {
             days: {
               ...state.days,

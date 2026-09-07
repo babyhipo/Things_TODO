@@ -98,6 +98,8 @@
 
 /* ── 카드 (목록뷰 TodoItem과 동일한 padding/gap) ── */
 .card {
+  /* 좌우 스와이프는 앱이 직접 처리 — 브라우저가 가로 스크롤로 가로채지 않게 */
+  touch-action: pan-y;
   background-color: var(--color-bg-card, #FFFFFF);
   border-radius: var(--radius-md, 8px);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -279,6 +281,8 @@
 
 /* ── 하위 일정 행 ── */
 .subItem {
+  /* 좌우 스와이프는 앱이 직접 처리 — 브라우저가 가로 스크롤로 가로채지 않게 */
+  touch-action: pan-y;
   position: relative;
   z-index: 1;
   display: flex;
@@ -728,6 +732,8 @@
 }
 
 .unscheduledItem {
+  /* 좌우 스와이프는 앱이 직접 처리 — 브라우저가 가로 스크롤로 가로채지 않게 */
+  touch-action: pan-y;
   display: flex;
   align-items: center;
   gap: 10px;
