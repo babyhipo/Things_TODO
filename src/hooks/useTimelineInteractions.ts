@@ -17,6 +17,7 @@ import {
   calcDragInsertBeforeId,
   isDragOverUnscheduled,
   isDemoteGesture,
+  SWIPE_TRIGGER_PX,
   dragDx,
   DRAG_DEMOTE_DX,
   type CardAnchor,
@@ -414,10 +415,10 @@ export function useTimelineInteractions(day: DayKey) {
       const s = swipeRef.current;
       if (s && s.direction === 'h') {
         const dx = s.currentX - s.startX;
-        if (dx <= -72) {
+        if (dx <= -SWIPE_TRIGGER_PX) {
           hapticDelete();
           deleteTodo(day, s.todoId);
-        } else if (dx >= 72 && day === 'today') {
+        } else if (dx >= SWIPE_TRIGGER_PX && day === 'today') {
           // '내일로 미루기'는 미완료 카드만 (완료 카드는 오른쪽 스와이프해도 이동 안 함)
           const target = useTodoStore.getState().days[day].find(t => t.id === s.todoId);
           if (target && !target.completed) {

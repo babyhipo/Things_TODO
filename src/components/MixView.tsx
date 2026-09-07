@@ -3,7 +3,7 @@ import styles from './MixView.module.css';
 import { formatTime } from '../lib/timeFormatter';
 import type { DayKey } from '../types/todo';
 import { toVirt } from '../lib/dayBoundary';
-import { eventColor } from '../lib/timelineMath';
+import { eventColor, getSwipeVisual } from '../lib/timelineMath';
 import { useTimelineInteractions } from '../hooks/useTimelineInteractions';
 
 interface MixViewProps { day: DayKey; }
@@ -116,11 +116,8 @@ export function MixView({ day }: MixViewProps) {
                             && day === 'today' && virtTodoTime < now && !lifted;
           const color = eventColor(todo.time, isOverdue, todo.completed, now, day);
 
-          const isSwipingThis  = swipe?.todoId === todo.id && swipe.direction !== 'v';
-          const rawOffset      = isSwipingThis ? swipe!.currentX - swipe!.startX : 0;
-          const swipeOffset    = Math.max(-80, Math.min(80, rawOffset));
-          const deleteProgress = Math.min(1, -swipeOffset / 72);
-          const moveProgress   = Math.min(1, swipeOffset / 72);
+          const { active: isSwipingThis, offset: swipeOffset, deleteProgress, moveProgress } =
+            getSwipeVisual(swipe, todo.id);
 
           const card = (
             <div
@@ -263,11 +260,10 @@ export function MixView({ day }: MixViewProps) {
               {card}
               {!isDragging && !isPlacing && displayChildren.filter(c => c.id !== promotingSubId).map(child => {
                 // 부모카드와 동일한 스와이프(왼쪽 삭제 / 오른쪽 내일 이동) 계산
-                const isSwipingSub  = swipe?.todoId === child.id && swipe.direction !== 'v';
-                const rawOffsetSub  = isSwipingSub ? swipe!.currentX - swipe!.startX : 0;
-                const swipeOffsetSub = Math.max(-80, Math.min(80, rawOffsetSub));
-                const deleteProgressSub = Math.min(1, -swipeOffsetSub / 72);
-                const moveProgressSub   = Math.min(1, swipeOffsetSub / 72);
+                const {
+                  active: isSwipingSub, offset: swipeOffsetSub,
+                  deleteProgress: deleteProgressSub, moveProgress: moveProgressSub,
+                } = getSwipeVisual(swipe, child.id);
                 return (
                 <div key={child.id} className={styles.subRow}>
                   {isSwipingSub && swipeOffsetSub < -12 && (
@@ -351,11 +347,10 @@ export function MixView({ day }: MixViewProps) {
             {displayUnscheduled.map(todo => {
               // 타임라인 위로 끌어 실제 카드가 타임라인에 삽입돼 있으면 여기선 숨김
               if (isOverTl && unscheduledDrag?.todoId === todo.id) return null;
-              const isSwipingU      = swipe?.todoId === todo.id && swipe.direction !== 'v';
-              const rawOffsetU      = isSwipingU ? swipe!.currentX - swipe!.startX : 0;
-              const swipeOffsetU    = Math.max(-80, Math.min(80, rawOffsetU));
-              const deleteProgressU = Math.min(1, -swipeOffsetU / 72);
-              const moveProgressU   = Math.min(1, swipeOffsetU / 72);
+              const {
+                active: isSwipingU, offset: swipeOffsetU,
+                deleteProgress: deleteProgressU, moveProgress: moveProgressU,
+              } = getSwipeVisual(swipe, todo.id);
               const unschedChildren = (childrenByParent.get(todo.id) ?? [])
                 .slice()
                 .sort((a, b) => a.order - b.order);
@@ -435,16 +430,17 @@ export function MixView({ day }: MixViewProps) {
                 {/* 미지정 카드의 하위일정 — 시간이 해제돼도 하위일정이 사라져 보이지 않게 함.
                     (순서 변경은 타임라인 기준이라 여기선 손잡이 없이 완료·편집·스와이프만) */}
                 {unschedChildren.map(child => {
-                  const isSwipingC   = swipe?.todoId === child.id && swipe.direction !== 'v';
-                  const rawOffsetC   = isSwipingC ? swipe!.currentX - swipe!.startX : 0;
-                  const swipeOffsetC = Math.max(-80, Math.min(80, rawOffsetC));
+                  const {
+                    active: isSwipingC, offset: swipeOffsetC,
+                    deleteProgress: deleteProgressC, moveProgress: moveProgressC,
+                  } = getSwipeVisual(swipe, child.id);
                   return (
                     <div key={child.id} className={styles.subRow}>
                       {isSwipingC && swipeOffsetC < -12 && (
-                        <div className={styles.swipeDeleteHint} style={{ opacity: Math.min(1, -swipeOffsetC / 72) }}>×</div>
+                        <div className={styles.swipeDeleteHint} style={{ opacity: deleteProgressC }}>×</div>
                       )}
                       {isSwipingC && swipeOffsetC > 12 && day === 'today' && !child.completed && (
-                        <div className={styles.swipeMoveHint} style={{ opacity: Math.min(1, swipeOffsetC / 72) }}>→</div>
+                        <div className={styles.swipeMoveHint} style={{ opacity: moveProgressC }}>→</div>
                       )}
                       <div
                         data-sub-id={child.id}

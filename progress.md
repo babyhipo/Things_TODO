@@ -191,3 +191,19 @@
   헤더는 보이는 화면 맨 위, 입력 바는 키보드 바로 위. 105 tests green, lint/build clean.
 - **Blocked**: 없음.
 - **Next**: 실기기에서 키보드 올릴 때 상단바 확인. 미푸시.
+
+## 2026-09-07 (7세션: 리팩토링 1차 — 무위험 영역)
+- **Done**: 동작 변화 없는 정리만 수행.
+  · 미사용 CSS 클래스 6개 삭제(MixView: cardDragOutside/subItemTime/timeLabelOverdue/warnBadge,
+    TodoItem: deleteButton/warnBadge) — CSS 번들 41.4→40.4kB.
+  · TodoList의 지역 복제 훅(`useNowTickLocal` + `getCurrentMinutes`) 제거 → 공용 `useNowTick` 사용.
+    (공용 훅은 분 경계에 맞춰 첫 틱을 정렬해 더 정확. 목록뷰는 '실제 분'을 쓰므로 가상시간
+    `useNowMinutes`와는 다른 훅이 맞다.)
+  · 더 이상 호출되지 않는 스토어 액션 `setParentId` 삭제(하위 편입은 `makeSubItemOf`로 일원화).
+  · MixView에 4번 복붙돼 있던 스와이프 계산을 `getSwipeVisual()`(timelineMath)로 통일하고,
+    임계값을 `SWIPE_MAX_PX`/`SWIPE_TRIGGER_PX` 상수로 뽑아 훅의 판정과 같은 값을 쓰게 함.
+  **110 tests green(+5), lint/build clean.** 브라우저 회귀 확인: 카드 우스와이프=내일로,
+  하위 좌스와이프=삭제, 미지정 우스와이프=내일로, 목록뷰 렌더/시간색, 콘솔 에러 없음.
+- **Next(오너 확인 대기)**: ① 미사용 컴포넌트 3개(DayTabs·BottomNav·DateHeader) + AppShell의
+  bottomNav 분기 삭제 ② 하위일정 JSX 중복(타임라인/미지정) 공용 컴포넌트로 추출
+  ③ useTimelineInteractions(847줄) 기능별 훅 분리.

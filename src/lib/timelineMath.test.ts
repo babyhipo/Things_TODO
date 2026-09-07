@@ -9,10 +9,14 @@ import {
   calcDragInsertBeforeId,
   isDragOverUnscheduled,
   isDemoteGesture,
+  getSwipeVisual,
+  SWIPE_MAX_PX,
+  SWIPE_TRIGGER_PX,
   DRAG_DEMOTE_DX,
   SECTION_MARKS,
   type CardAnchor,
   type DragState,
+  type SwipeState,
 } from './timelineMath';
 
 describe('snapTo — 5분 단위 반올림', () => {
@@ -239,5 +243,37 @@ describe('isDemoteGesture — 하위 편입 제스처(좌우 양방향)', () => 
 
   it('가로 좌표가 없으면(구형 상태) 발동하지 않는다', () => {
     expect(isDemoteGesture({ ...base, startX: undefined, currentX: undefined })).toBe(false);
+  });
+});
+
+describe('getSwipeVisual — 좌우 스와이프 표시값', () => {
+  const swipe = (over: Partial<SwipeState> = {}): SwipeState => ({
+    todoId: 'a', startX: 100, currentX: 100, startY: 0, direction: 'h', ...over,
+  });
+
+  it('스와이프 중이 아니면 움직이지 않는다', () => {
+    expect(getSwipeVisual(null, 'a').offset).toBe(0);
+    expect(getSwipeVisual(swipe({ currentX: 200 }), 'other').offset).toBe(0);
+  });
+
+  it('세로로 판정된 제스처는 카드를 밀지 않는다(목록 스크롤)', () => {
+    expect(getSwipeVisual(swipe({ currentX: 200, direction: 'v' }), 'a').active).toBe(false);
+  });
+
+  it('오른쪽으로 끌면 내일로 미루기 힌트가 진해진다', () => {
+    const v = getSwipeVisual(swipe({ currentX: 100 + SWIPE_TRIGGER_PX }), 'a');
+    expect(v.offset).toBe(SWIPE_TRIGGER_PX);
+    expect(v.moveProgress).toBe(1);
+    expect(v.deleteProgress).toBeLessThanOrEqual(0);
+  });
+
+  it('왼쪽으로 끌면 삭제 힌트가 진해진다', () => {
+    const v = getSwipeVisual(swipe({ currentX: 100 - SWIPE_TRIGGER_PX }), 'a');
+    expect(v.deleteProgress).toBe(1);
+  });
+
+  it('아무리 끌어도 최대 이동량을 넘지 않는다', () => {
+    expect(getSwipeVisual(swipe({ currentX: 999 }), 'a').offset).toBe(SWIPE_MAX_PX);
+    expect(getSwipeVisual(swipe({ currentX: -999 }), 'a').offset).toBe(-SWIPE_MAX_PX);
   });
 });

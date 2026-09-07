@@ -45,7 +45,6 @@ interface TodoState {
   unscheduleTodo: (day: DayKey, id: string) => void;
   // 시간을 지정하면서 순서까지 함께 확정: beforeId 카드 "바로 앞"에 삽입(null이면 맨 뒤)
   assignTimeAt: (day: DayKey, id: string, time: number, beforeId: string | null) => void;
-  setParentId: (day: DayKey, id: string, parentId: string | null) => void;
   makeSubItemOf: (day: DayKey, id: string, newParentId: string) => void;
   reorderSubItems: (day: DayKey, parentId: string, newOrderIds: string[]) => void;
   reorderUnscheduled: (day: DayKey, newOrderIds: string[]) => void;
@@ -526,17 +525,6 @@ export const useTodoStore = create<TodoState>()(
 
           return { days: { ...state.days, [day]: result }, historyLength: _hist.length };
         });
-      },
-
-      setParentId: (day, id, parentId) => {
-        pushHist(get().days);
-        set((state) => ({
-          days: {
-            ...state.days,
-            [day]: state.days[day].map((t) => (t.id === id ? { ...t, parentId } : t)),
-          },
-          historyLength: _hist.length,
-        }));
       },
 
       // 드래그드롭으로 다른 카드의 하위일정으로 편입한다.

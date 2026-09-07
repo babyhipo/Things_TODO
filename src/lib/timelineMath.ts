@@ -125,6 +125,33 @@ export interface SwipeState {
   direction: 'undecided' | 'h' | 'v';
 }
 
+/**
+ * 좌우 스와이프 표시값 (일정카드·하위일정·미지정 카드가 모두 같은 규칙을 쓴다).
+ * 왼쪽 = 삭제, 오른쪽 = 내일로 미루기. 최대 ±SWIPE_MAX_PX 까지만 따라오고,
+ * SWIPE_TRIGGER_PX 를 넘기면 힌트가 완전히 진해진다(실제 실행 판정도 같은 값).
+ */
+export const SWIPE_MAX_PX = 80;
+export const SWIPE_TRIGGER_PX = 72;
+
+export interface SwipeVisual {
+  active: boolean;          // 이 항목을 좌우로 스와이프 중인지
+  offset: number;           // 카드에 적용할 가로 이동량(px)
+  deleteProgress: number;   // 왼쪽(삭제) 힌트 진하기 0~1
+  moveProgress: number;     // 오른쪽(내일로) 힌트 진하기 0~1
+}
+
+export function getSwipeVisual(swipe: SwipeState | null, todoId: string): SwipeVisual {
+  const active = !!swipe && swipe.todoId === todoId && swipe.direction !== 'v';
+  const raw = active ? swipe!.currentX - swipe!.startX : 0;
+  const offset = Math.max(-SWIPE_MAX_PX, Math.min(SWIPE_MAX_PX, raw));
+  return {
+    active,
+    offset,
+    deleteProgress: Math.min(1, -offset / SWIPE_TRIGGER_PX),
+    moveProgress: Math.min(1, offset / SWIPE_TRIGGER_PX),
+  };
+}
+
 export interface UnscheduledDragState {
   todoId: string;
   text: string;

@@ -141,11 +141,6 @@
   margin-top: 4px;
 }
 
-.cardDragOutside {
-  opacity: 0.5;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
 /* ── 시간 레이블 래퍼 (목록뷰 .timeWrap과 동일) ── */
 .timeWrap {
   flex: 0 0 auto;
@@ -176,10 +171,6 @@
   white-space: nowrap;
   line-height: 1;
   margin-top: 3px;
-}
-
-.timeLabelOverdue {
-  color: var(--color-event-red, #EF4444);
 }
 
 /* ── 체크박스 (목록뷰 스타일, 세로선 위치에 배치) ── */
@@ -265,22 +256,6 @@
   font-weight: 400;
 }
 
-/* ── ! 배지 (목록뷰 warnBadge) ── */
-.warnBadge {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background-color: var(--color-warn, #D48806);
-  color: #FFFFFF;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-}
-
 /* ── 하위 일정 행 ── */
 .subItem {
   /* 좌우 스와이프는 앱이 직접 처리 — 브라우저가 가로 스크롤로 가로채지 않게 */
@@ -338,13 +313,6 @@
 .subItemTextDone {
   text-decoration: line-through;
   color: var(--color-text-muted, #8A8A82);
-}
-
-.subItemTime {
-  flex: 0 0 2px;
-  width: 2px;
-  min-width: 2px;
-  overflow: hidden;
 }
 
 /* 네모 체크박스 */

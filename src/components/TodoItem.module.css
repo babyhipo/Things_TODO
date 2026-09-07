@@ -234,21 +234,6 @@
   }
 }
 
-.warnBadge {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background-color: var(--color-warn, #D48806);
-  color: #FFFFFF;
-  font-size: var(--font-size-xs, 12px);
-  font-weight: 700;
-  line-height: 1;
-}
-
 .timeWrap {
   flex: 0 0 auto;
   width: 36px;
@@ -344,26 +329,8 @@
   background-color: var(--color-line, #E5E3DC);
 }
 
-.deleteButton {
-  flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted, #8A8A82);
-  font-size: 22px;
-  border-radius: var(--radius-sm, 4px);
-  opacity: 0;
-  transition: opacity 120ms ease, color 120ms ease;
-}
-
 .item:hover .deleteButton,
-.item:focus-within .deleteButton {
-  opacity: 1;
-}
-
-.deleteButton:hover,
+.item:focus-within .deleteButton:hover,
 .deleteButton:focus-visible {
   color: var(--color-text, #1F1F1F);
   background-color: var(--color-line, #E5E3DC);
@@ -372,7 +339,4 @@
 
 /* 모바일 터치 환경에서는 삭제 버튼을 흐리게라도 항상 노출 */
 @media (hover: none) {
-  .deleteButton {
-    opacity: 0.5;
   }
-}

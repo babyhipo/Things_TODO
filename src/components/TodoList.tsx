@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { hapticGrab, hapticDrop } from '../lib/haptics';
 import {
   DndContext,
@@ -23,21 +23,8 @@ import styles from './TodoList.module.css';
 import { useTodoStore, computeReorderedTime } from '../store/useTodoStore';
 import { TodoItem } from './TodoItem';
 import { toVirt } from '../lib/dayBoundary';
+import { useNowTick } from '../hooks/useNowTick';
 import { formatTime } from '../lib/timeFormatter';
-
-function getCurrentMinutes(): number {
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
-}
-
-function useNowTickLocal(): number {
-  const [now, setNow] = useState(() => getCurrentMinutes());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(getCurrentMinutes()), 60_000);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
-}
 
 // 아이템 아래 간격: 부모→자식, 자식 형제끼리는 좁게
 function getGapAfter(
@@ -57,7 +44,7 @@ export function TodoList() {
   const days = useTodoStore((s) => s.days);
   const reorderTodos = useTodoStore((s) => s.reorderTodos);
 
-  const now = useNowTickLocal();
+  const now = useNowTick();
 
   const todos = useMemo(() => {
     const all = days[activeDay];
