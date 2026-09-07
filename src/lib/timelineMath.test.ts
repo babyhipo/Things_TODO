@@ -8,6 +8,8 @@ import {
   calcDragTime,
   calcDragInsertBeforeId,
   isDragOverUnscheduled,
+  isDemoteGesture,
+  DRAG_DEMOTE_DX,
   SECTION_MARKS,
   type CardAnchor,
   type DragState,
@@ -204,5 +206,38 @@ describe('calcDragTime — 구분선 앵커(감도 완화)', () => {
     expect(t).toBeGreaterThan(1080);
     expect(t).toBeLessThan(1440);
     expect(Math.abs(t - 1260)).toBeLessThanOrEqual(30); // 대략 21시 부근
+  });
+});
+
+describe('isDemoteGesture — 하위 편입 제스처(좌우 양방향)', () => {
+  const base: DragState = {
+    todoId: 'a',
+    initialCardCenterY: 100,
+    cardHeight: 40,
+    currentY: 100,
+    anchors: [],
+    containerTop: 0,
+    containerBottom: 300,
+    containerLeft: 0,
+    grabOffset: 0,
+    startX: 200,
+    currentX: 200,
+  };
+
+  it('조금만 흔들린 정도로는 발동하지 않는다', () => {
+    expect(isDemoteGesture({ ...base, currentX: 200 + DRAG_DEMOTE_DX - 1 })).toBe(false);
+    expect(isDemoteGesture({ ...base, currentX: 200 - DRAG_DEMOTE_DX + 1 })).toBe(false);
+  });
+
+  it('오른쪽으로 밀면 발동한다', () => {
+    expect(isDemoteGesture({ ...base, currentX: 200 + DRAG_DEMOTE_DX })).toBe(true);
+  });
+
+  it('왼쪽으로 밀어도 발동한다(모바일: 손잡이가 오른쪽 끝이라 오른쪽 여유가 없음)', () => {
+    expect(isDemoteGesture({ ...base, currentX: 200 - DRAG_DEMOTE_DX })).toBe(true);
+  });
+
+  it('가로 좌표가 없으면(구형 상태) 발동하지 않는다', () => {
+    expect(isDemoteGesture({ ...base, startX: undefined, currentX: undefined })).toBe(false);
   });
 });

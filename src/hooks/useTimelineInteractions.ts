@@ -17,6 +17,7 @@ import {
   calcDragInsertBeforeId,
   isDragOverUnscheduled,
   isDemoteGesture,
+  dragDx,
   DRAG_DEMOTE_DX,
   type CardAnchor,
   type DragState,
@@ -446,7 +447,7 @@ export function useTimelineInteractions(day: DayKey) {
       if (ds) {
         const y = e.clientY - ds.grabOffset; // 누른 지점 보정
         const dsNow = { ...ds, currentY: y, currentX: e.clientX };
-        // 오른쪽으로 충분히 밀면서 다른 카드 위에 있으면 → 그 카드의 하위일정으로 편입
+        // 좌우 어느 쪽으로든 충분히 밀면서 다른 카드 위에 있으면 → 그 카드의 하위일정으로 편입
         let demote: string | null = null;
         if (isDemoteGesture(dsNow)) {
           for (const t of scheduled) {
@@ -810,10 +811,13 @@ export function useTimelineInteractions(day: DayKey) {
     : null;
   // 승격 중인 하위일정은 원래 자리(부모 아래)에서 숨긴다 — 두 번 보이지 않게
   const promotingSubId = subDrag && subPromote ? subDrag.todoId : null;
-  // 하위 편입 제스처(오른쪽으로 밀기) 중인 카드의 들여쓰기 미리보기 오프셋
-  const dragIndentOffset = (drag && subDragParentTarget && drag.startX !== undefined && drag.currentX !== undefined)
-    ? Math.min(40, Math.max(0, drag.currentX - drag.startX - DRAG_DEMOTE_DX + 12))
-    : 0;
+  // 하위 편입 제스처(가로로 밀기) 중인 카드의 미리보기 오프셋 — 민 방향으로 따라 움직인다
+  const dragIndentOffset = (() => {
+    if (!drag || !subDragParentTarget) return 0;
+    const dx = dragDx(drag);
+    const magnitude = Math.min(40, Math.max(0, Math.abs(dx) - DRAG_DEMOTE_DX + 12));
+    return dx < 0 ? -magnitude : magnitude;
+  })();
 
   // 빈 타임라인 안내 문구용 제안 시간
   const unscheduledProposedTime = (unscheduledDrag && isOverTl)

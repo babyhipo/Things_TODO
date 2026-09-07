@@ -101,10 +101,15 @@ export function isDragOverUnscheduled(ds: DragState): boolean {
   return ds.currentY > ds.containerBottom;
 }
 
-/** 오른쪽으로 충분히 밀었는지(= 하위일정 편입 제스처) */
+/** 좌우 어느 쪽으로든 충분히 밀었는지(= 하위일정 편입 제스처) */
 export function isDemoteGesture(ds: DragState): boolean {
-  if (ds.startX === undefined || ds.currentX === undefined) return false;
-  return ds.currentX - ds.startX >= DRAG_DEMOTE_DX;
+  return Math.abs(dragDx(ds)) >= DRAG_DEMOTE_DX;
+}
+
+/** 드래그 시작점 대비 가로 이동량(px). 좌 = 음수, 우 = 양수 */
+export function dragDx(ds: DragState): number {
+  if (ds.startX === undefined || ds.currentX === undefined) return 0;
+  return ds.currentX - ds.startX;
 }
 
 /** 삽입 위치(어느 카드 앞): 포인터 Y 기준 (null이면 맨 뒤) */
@@ -155,9 +160,10 @@ export const SNAP = 5; // 시간 스냅 단위(분)
 // 같은 시간 스냅 존(px): 카드 중심 ±이 값 안에서는 시간이 그 카드 시간으로 고정되고,
 // 중심보다 위=앞/아래=뒤로 순서만 갈린다. 이 존을 벗어나야 시간이 바뀐다.
 export const DRAG_SNAP_ZONE = 8;
-// 일정카드를 오른쪽으로 이 정도(px) 밀면서 다른 카드 위에 놓으면 그 카드의 하위일정이 된다.
-// (세로 위치는 시간 조절에 이미 쓰이므로, '들여쓰기'처럼 가로 이동으로 구분한다)
-export const DRAG_DEMOTE_DX = 32;
+// 일정카드를 좌우 어느 쪽으로든 이 정도(px) 밀면서 다른 카드 위에 놓으면 그 카드의 하위일정이 된다.
+// 세로 위치는 시간 조절에 이미 쓰이므로 가로 이동으로 구분하되, 손잡이가 카드 오른쪽 끝에 있어
+// 모바일에서는 오른쪽으로 밀 여유가 없다 → 왼쪽으로 밀어도 동일하게 동작한다.
+export const DRAG_DEMOTE_DX = 40;
 
 export const SECTION_MARKS = [
   { virtMin: 12 * 60, label: '오후', key: 'section-pm' },
