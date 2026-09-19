@@ -74,10 +74,14 @@
 /* 하위 항목 텍스트도 일정카드 텍스트와 동일 크기로 통일 (편집창은 기본 .textInput 16px 상속) */
 .itemSub .textButton {
   font-size: var(--card-text);
+  /* 부모 카드의 + 버튼 자리(20px + 간격 10px)만큼 비워 글자 폭을 부모와 맞춤
+     (수정 중엔 부모도 + 대신 들여쓰기 버튼이 나와 폭이 같으므로 평소 글자에만 적용) */
+  margin-right: 30px;
 }
 
 .itemSub .checkbox {
-  width: 20px;
+  /* 부모 체크박스 칸(24px)과 같은 폭 → 글자 시작 위치가 부모와 일치 */
+  width: 24px;
   height: 20px;
 }
 
