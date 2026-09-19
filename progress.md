@@ -416,3 +416,12 @@
   검증: 네 곳 모두 켜기/끄기, 수정칸 유지, 엔터 저장 후 별 유지·버튼 사라짐. 오너 미리보기 데이터는
   백업 후 복구 확인. lint · build 통과.
   · 참고: 별은 누르는 즉시 저장되므로, 수정 중 ESC(글자 수정 취소)를 눌러도 별 변경은 남음.
+
+## 2026-09-19 (배포)
+- 오너 요청으로 feat/star-important(11~13세션 커밋 13개 전부 포함)를 main에 fast-forward 병합 후 푸시.
+  푸시 전 main에서 133 tests · lint · build 재확인. GitHub Actions run 35442615421 성공(build-and-deploy).
+  배포본 번들(index-Ckvbjiv5.js)에 별 버튼·빈 정각 줄 코드 포함 확인.
+- 포함 내용: 긴 글 수정칸 + 누른 위치 커서 / 카드 정렬·여백 통일 7건 / 드래그 중 빈 시간 1시간 칸(30px) /
+  주요 일정 별(등록 시 + 수정 중 켜고 끄기).
+- **Next**: 폰에서 실사용 확인(드래그 감도·별 버튼). 로컬 브랜치 3개(feat/edit-full-text,
+  feat/drag-empty-hours, feat/star-important)는 main에 모두 들어가 정리 가능.
