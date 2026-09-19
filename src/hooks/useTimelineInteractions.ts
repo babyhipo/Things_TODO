@@ -423,12 +423,14 @@ export function useTimelineInteractions(day: DayKey) {
       const r = grabbed.getBoundingClientRect();
       const want = scroller.scrollTop + (r.top + r.height / 2) - ex.beforeCenterY;
       // 아래로 스크롤할 여유가 모자라면 맨 아래 빈 공간을 늘림 (놓으면 다시 0).
-      // 내용이 화면보다 짧으면 늘린 공간 일부가 화면 안 빈자리를 채우는 데 쓰이므로, 다시 재서 모자란 만큼 더 늘린다
+      // 내용이 화면보다 짧을 수 있어 scrollHeight 대신 빈 공간의 실제 끝 위치로 전체 내용 높이를 잼
       const spacer = dragSpacerRef.current;
-      for (let i = 0; spacer && i < 3; i++) {
-        const lack = want - (scroller.scrollHeight - scroller.clientHeight);
-        if (lack <= 0) break;
-        spacer.style.height = `${(parseFloat(spacer.style.height) || 0) + Math.ceil(lack)}px`;
+      if (spacer) {
+        const sr = scroller.getBoundingClientRect();
+        const padBottom = parseFloat(getComputedStyle(scroller).paddingBottom) || 0;
+        const contentH = spacer.getBoundingClientRect().bottom - sr.top + scroller.scrollTop + padBottom;
+        const extra = want + scroller.clientHeight - contentH;
+        if (extra > 0) spacer.style.height = `${(parseFloat(spacer.style.height) || 0) + Math.ceil(extra)}px`;
       }
       scroller.scrollTop = want;
     }

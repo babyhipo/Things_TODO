@@ -365,15 +365,15 @@ describe('calcDragTime — 기준점별 자석 구간(snapZone)', () => {
     todoId: 'x', initialCardCenterY: 0, cardHeight: 40, currentY: 0, anchors: [],
     containerTop: 0, containerBottom: 1000, containerLeft: 0, grabOffset: 0,
     sectionAnchors: [
-      { todoId: 'h15', time: 900, centerY: 100, snapZone: 4 },
-      { todoId: 'h16', time: 960, centerY: 122, snapZone: 4 },
+      { todoId: 'h15', time: 900, centerY: 100, snapZone: 5 },
+      { todoId: 'h16', time: 960, centerY: 130, snapZone: 5 },
     ],
   };
-  it('정각 줄 ±4px 안이면 그 정각', () => {
-    expect(calcDragTime({ ...base, currentY: 104 })).toBe(900);
+  it('정각 줄 ±5px 안이면 그 정각', () => {
+    expect(calcDragTime({ ...base, currentY: 105 })).toBe(900);
   });
-  it('자석 구간 밖(±4px 초과)이면 줄 사이 5분 단위로 보간 (22px 칸 가운데 = 15:30)', () => {
-    expect(calcDragTime({ ...base, currentY: 111 })).toBe(930);
+  it('자석 구간 밖(±5px 초과)이면 줄 사이 5분 단위로 보간 (30px 칸 가운데 = 15:30)', () => {
+    expect(calcDragTime({ ...base, currentY: 115 })).toBe(930);
   });
   it('snapZone이 없으면 기존 8px (카드 기준점은 그대로)', () => {
     const noZone = { ...base, sectionAnchors: base.sectionAnchors!.map(a => ({ ...a, snapZone: undefined })) };
