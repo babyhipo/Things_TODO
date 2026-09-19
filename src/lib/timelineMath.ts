@@ -1,6 +1,6 @@
 // 믹스뷰 드래그/보간에 쓰는 순수 계산 로직과 타입.
 import { toVirt, DAY_START_MIN } from './dayBoundary';
-import type { Todo } from '../types/todo';
+import type { DayKey, Todo } from '../types/todo';
 
 // ── 드래그 관련 타입 ─────────────────────────────────────────
 export interface CardAnchor {
@@ -155,11 +155,19 @@ export function getSwipeVisual(swipe: SwipeState | null, todoId: string): SwipeV
 export interface UnscheduledDragState {
   todoId: string;
   text: string;
-  currentY: number;
-  timelineTop: number;
+  currentY: number;     // 화면 좌표(실시간) — 타임라인 위/아래 판정용
+  timelineTop: number;  // 실시간 타임라인 경계 (끼워넣은 카드만큼 늘어나므로 매번 다시 잼)
   timelineBottom: number;
   timelineLeft: number;
-  anchors: CardAnchor[];
+  anchors: CardAnchor[]; // 다른 카드 위치 (드래그 시작 시 스냅샷)
+  // ── 시간 계산용 스냅샷 (빈 정각 칸을 펼친 직후에 잰 값) ──
+  /** 구분선·현재시각·펼친 정각 줄 — 카드처럼 시간 기준점으로 씀 */
+  waypoints?: CardAnchor[];
+  /** 스냅샷 시점의 타임라인 경계 */
+  snapTop?: number;
+  snapBottom?: number;
+  /** 스냅샷 이후 자동 스크롤된 양(px). 손가락 위치를 스냅샷 좌표로 바꿀 때 더함 */
+  scrollDelta?: number;
 }
 
 export interface SubDragState {
@@ -180,7 +188,9 @@ export type Segment =
   | { type: 'event'; todo: Todo }
   | { type: 'gap'; fromMin: number; toMin: number; key: string }
   | { type: 'now'; time: number; key: string }
-  | { type: 'section'; label: string; key: string; virtMin: number };
+  | { type: 'section'; label: string; key: string; virtMin: number }
+  // 드래그하는 동안만 펼치는 빈 정각 줄 (카드가 없는 시간 구간에 놓기 쉽게)
+  | { type: 'hour'; virtMin: number; key: string };
 
 // ── 상수 ────────────────────────────────────────────────────
 export const SNAP = 5; // 시간 스냅 단위(분)
@@ -199,6 +209,10 @@ export const SECTION_MARKS = [
   // 중간 기준점(앵커) 겸 구분선으로 넣는다. 가상분 1440 = 다음날 00:00
   { virtMin: 24 * 60, label: '자정', key: 'section-midnight' },
 ];
+
+// 드래그 중 펼치는 빈 정각 줄 범위: 내일 탭은 아침 6시부터, 둘 다 밤 11시 줄까지 (자정은 구분선)
+export const DRAG_HOURS_TOMORROW_START = 6 * 60;
+export const DRAG_HOURS_LAST = 23 * 60;
 
 // ── 계산 함수 ────────────────────────────────────────────────
 /** 5분 단위로 반올림 */
@@ -273,4 +287,106 @@ export function eventColor(
   const diff = toVirt(time) + offset - now;
   if (diff <= 60) return '#F59E0B';
   return '#3B5BDB';
+}
+
+/**
+ * 드래그하는 동안 펼칠 '빈 정각' 목록(가상분).
+ * - 오늘: 지금 시각 이후의 정각부터 / 내일: 아침 6시부터 — 밤 11시까지
+ * - 그 1시간(정각 ~ 59분) 안에 일정이 하나라도 있으면 제외 (그 카드가 이미 기준점 역할)
+ * - 오후(12시)·저녁(6시) 구분선과 겹치는 정각도 제외 (구분선이 이미 기준점)
+ * @param occupied 다른 일정들의 가상분 시간 (잡고 있는 카드는 빼고 넘길 것)
+ */
+export function calcEmptyHourSlots(occupied: number[], day: DayKey, now: number): number[] {
+  const start = day === 'today'
+    ? Math.max(DAY_START_MIN, (Math.floor(now / 60) + 1) * 60)
+    : DRAG_HOURS_TOMORROW_START;
+  const sectionMins = new Set(SECTION_MARKS.map(m => m.virtMin));
+  const out: number[] = [];
+  for (let h = start; h <= DRAG_HOURS_LAST; h += 60) {
+    if (sectionMins.has(h)) continue;
+    if (occupied.some(t => t >= h && t < h + 60)) continue;
+    out.push(h);
+  }
+  return out;
+}
+
+/**
+ * 믹스뷰 타임라인에 그릴 순서: 카드 사이사이에 구분선·현재시각·빈 정각 줄(드래그 중)·갭을 끼운다.
+ * 구분선·현재시각·정각 줄은 시간순으로 섞어서, 화면 위→아래 순서가 곧 시간 순서가 되게 한다
+ * (드래그 시간 계산이 화면 위치 순서를 기준으로 하기 때문).
+ * @param dragHours 드래그 중이면 펼칠 빈 정각 목록, 아니면 null (null이면 긴 빈 구간은 'N시간 생략' 갭)
+ */
+export function buildSegments(
+  events: Todo[],
+  day: DayKey,
+  now: number,
+  dragHours: number[] | null,
+): Segment[] {
+  // 끼워 넣을 표시들. beforeEqual=true면 같은 시간 카드보다 위(구분선·정각), false면 아래(현재시각)
+  type Marker = { virtMin: number; beforeEqual: boolean; seg: Segment };
+  const markers: Marker[] = [
+    ...SECTION_MARKS.map(m => ({
+      virtMin: m.virtMin, beforeEqual: true,
+      seg: { type: 'section', label: m.label, key: m.key, virtMin: m.virtMin } as Segment,
+    })),
+    ...(day === 'today'
+      ? [{ virtMin: now, beforeEqual: false, seg: { type: 'now', time: now, key: 'now' } as Segment }]
+      : []),
+    ...(dragHours ?? []).map(h => ({
+      virtMin: h, beforeEqual: true,
+      seg: { type: 'hour', virtMin: h, key: `hour-${h}` } as Segment,
+    })),
+  // 시간순. 같은 시간이면 카드 위에 올 표시(구분선·정각)가 먼저
+  ].sort((a, b) => a.virtMin - b.virtMin || Number(b.beforeEqual) - Number(a.beforeEqual));
+
+  // 일정이 하나도 없으면 (드래그 중이 아닌 한) 아무것도 그리지 않음
+  if (events.length === 0 && !dragHours) return [];
+
+  const result: Segment[] = [];
+  let mi = 0;
+  for (let i = 0; i < events.length; i++) {
+    const virtTime = toVirt(events[i].time ?? 0);
+    while (mi < markers.length) {
+      const m = markers[mi];
+      if (m.beforeEqual ? virtTime >= m.virtMin : virtTime > m.virtMin) {
+        result.push(m.seg);
+        mi++;
+      } else break;
+    }
+    result.push({ type: 'event', todo: events[i] });
+
+    // 3시간 넘게 빈 구간은 'N시간 생략'으로 접음 (드래그 중엔 정각 줄로 펼치므로 생략 안 함)
+    if (!dragHours && i < events.length - 1) {
+      const fromMin = virtTime;
+      const toMin   = toVirt(events[i + 1].time ?? 0);
+      const isPast  = day === 'today' && fromMin < now;
+      if (toMin - fromMin > 180 && !isPast)
+        result.push({ type: 'gap', fromMin, toMin, key: `${fromMin}-${toMin}` });
+    }
+  }
+  for (; mi < markers.length; mi++) result.push(markers[mi].seg);
+  return result;
+}
+
+/**
+ * 시간 미지정 카드를 타임라인에 놓을 시간(가상분).
+ * 카드 드래그와 같은 계산(calcDragTime)을 쓰되, 구분선·현재시각·펼친 정각 줄을 기준점으로 섞는다.
+ * 스냅샷(waypoints)이 아직 없으면 예전 방식(calcTimeFromY)으로 계산.
+ */
+export function calcUnscheduledDropTime(ds: UnscheduledDragState): number {
+  if (!ds.waypoints || ds.snapTop === undefined || ds.snapBottom === undefined) {
+    return calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
+  }
+  return calcDragTime({
+    todoId: ds.todoId,
+    initialCardCenterY: ds.currentY,
+    cardHeight: 0,
+    currentY: ds.currentY + (ds.scrollDelta ?? 0),
+    anchors: ds.anchors,
+    containerTop: ds.snapTop,
+    containerBottom: ds.snapBottom,
+    containerLeft: 0,
+    grabOffset: 0,
+    sectionAnchors: ds.waypoints,
+  });
 }

@@ -1,7 +1,7 @@
 // 믹스뷰의 상호작용 로직(편집·드래그·스와이프·하위항목 이동)을 한 곳으로 모은 훅.
 // 뷰 컴포넌트는 레이아웃(JSX)만 담당하고, 상태·핸들러·파생값은 여기서 만든다.
 // (예전엔 시간표뷰와 공유했으나 시간표뷰는 제거됨. 재사용 가능하도록 구조는 유지)
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
 import { hapticGrab, hapticTick, hapticReorder, hapticDrop, hapticDelete } from '../lib/haptics';
@@ -9,8 +9,10 @@ import type { DayKey, Todo } from '../types/todo';
 import { toVirt, fromVirt } from '../lib/dayBoundary';
 import { useNowMinutes } from './useNowMinutes';
 import {
-  SECTION_MARKS,
   calcTimeFromY,
+  calcEmptyHourSlots,
+  buildSegments,
+  calcUnscheduledDropTime,
   getInsertionBeforeId,
   getInsertionBeforeIdByTime,
   calcDragTime,
@@ -35,6 +37,23 @@ const subEl = (id: string | null) =>
   id ? document.querySelector<HTMLElement>(`[data-sub-id="${id}"]`) : null;
 const unschedEl = (id: string | null) =>
   id ? document.querySelector<HTMLElement>(`[data-unsched-id="${id}"]`) : null;
+
+// 스크롤되는 부모(AppShell의 main) — 드래그 중 위치 보정·자동 스크롤용
+function getScrollParent(el: HTMLElement | null): HTMLElement | null {
+  let p = el?.parentElement ?? null;
+  while (p) {
+    const oy = getComputedStyle(p).overflowY;
+    if (oy === 'auto' || oy === 'scroll') return p;
+    p = p.parentElement;
+  }
+  return null;
+}
+
+// 자동 스크롤: 화면 위/아래 끝에서 이 거리(px) 안으로 끌면 스크롤, 한 프레임 최대 이동량(px)
+const AUTO_SCROLL_ZONE = 64;
+const AUTO_SCROLL_MAX = 14;
+// 손가락을 이만큼(px) 움직이기 전에는 자동 스크롤 안 함 (끝자리 카드를 잡자마자 스크롤되는 것 방지)
+const AUTO_SCROLL_ARM_PX = 10;
 
 export function useTimelineInteractions(day: DayKey) {
   const days               = useTodoStore((s) => s.days);
@@ -121,6 +140,33 @@ export function useTimelineInteractions(day: DayKey) {
   const lastUnschedRef     = useRef<boolean>(false);      // 시간 해제 구역 진입/이탈 햅틱용
   const lastSubOrderRef    = useRef<string | null>(null);
   const pillRef            = useRef<HTMLDivElement>(null);
+  // 드래그하는 동안 펼친 빈 정각 목록 (null = 드래그 중 아님)
+  const [dragHours, setDragHours] = useState<number[] | null>(null);
+  // 칸을 펼친 직후 위치를 다시 재기 위한 정보 (드래그 시작 때 기록)
+  const expandRef = useRef<{ kind: 'card' | 'unsched'; id: string; startY: number; beforeCenterY: number } | null>(null);
+  // 스크롤 영역과 기준 스크롤 위치 (기준점을 잰 시점). 이후 스크롤된 양만큼 손가락 위치를 보정
+  const scrollRef = useRef<{ el: HTMLElement; origin: number } | null>(null);
+  // 마지막 손가락 위치 (자동 스크롤용). moved = 조금이라도 움직였는지
+  const lastPointerRef = useRef<{ x: number; y: number; startY: number; moved: boolean } | null>(null);
+  // 화면 맨 아래 빈 공간 — 칸을 펼쳐 잡은 카드가 밀린 만큼 스크롤로 되돌릴 여유가 부족할 때만 늘림
+  const dragSpacerRef = useRef<HTMLDivElement>(null);
+  const scrollDelta = () => (scrollRef.current ? scrollRef.current.el.scrollTop - scrollRef.current.origin : 0);
+  const trackPointer = (e: PointerEvent) => {
+    const lp = lastPointerRef.current;
+    if (!lp) return;
+    lastPointerRef.current = {
+      ...lp, x: e.clientX, y: e.clientY,
+      moved: lp.moved || Math.abs(e.clientY - lp.startY) > AUTO_SCROLL_ARM_PX,
+    };
+  };
+  // 드래그 종료 → 펼친 칸 접기
+  const endDragExpansion = () => {
+    if (dragSpacerRef.current) dragSpacerRef.current.style.height = '0px';
+    setDragHours(null);
+    expandRef.current = null;
+    scrollRef.current = null;
+    lastPointerRef.current = null;
+  };
   useEffect(() => { dragRef.current = drag; });
   useEffect(() => { unscheduledDragRef.current = unscheduledDrag; });
   useEffect(() => { swipeRef.current = swipe; });
@@ -174,8 +220,9 @@ export function useTimelineInteractions(day: DayKey) {
       if (overTl) {
         const dragged = unscheduled.find(t => t.id === unscheduledDrag.todoId);
         if (dragged) {
-          const t = calcTimeFromY(unscheduledDrag.currentY, unscheduledDrag.anchors, unscheduledDrag.timelineTop, unscheduledDrag.timelineBottom);
-          const beforeId = getInsertionBeforeId(unscheduledDrag.currentY, unscheduledDrag.anchors);
+          const t = calcUnscheduledDropTime(unscheduledDrag);
+          // 놓을 때와 같은 기준(시간)으로 끼울 자리를 정함 → 미리보기 위치 = 실제 놓이는 위치
+          const beforeId = getInsertionBeforeIdByTime(t, unscheduledDrag.anchors);
           const clone = { ...dragged, time: fromVirt(t) };
           const idx = beforeId == null ? scheduled.length : scheduled.findIndex(s => s.id === beforeId);
           const out = [...scheduled];
@@ -200,60 +247,11 @@ export function useTimelineInteractions(day: DayKey) {
     return scheduled;
   }, [scheduled, drag, unscheduledDrag, subDragParentTarget, unscheduled, subDrag, subPromote, childrenByParent]);
 
-  // ── 세그먼트: 이벤트/갭/현재시각/섹션 구분선 ──
-  const segments = useMemo<Segment[]>(() => {
-    const result: Segment[] = [];
-    let nowInserted = false;
-    const sectionsInserted = new Set<string>();
-
-    for (let i = 0; i < displayScheduled.length; i++) {
-      const virtTime = toVirt(displayScheduled[i].time ?? 0);
-
-      for (const mark of SECTION_MARKS) {
-        if (!sectionsInserted.has(mark.key) && virtTime >= mark.virtMin) {
-          result.push({ type: 'section', label: mark.label, key: mark.key, virtMin: mark.virtMin });
-          sectionsInserted.add(mark.key);
-        }
-      }
-
-      if (day === 'today' && !nowInserted && virtTime > now) {
-        result.push({ type: 'now', time: now, key: 'now' });
-        nowInserted = true;
-      }
-
-      result.push({ type: 'event', todo: displayScheduled[i] });
-
-      if (i < displayScheduled.length - 1) {
-        const fromMin = virtTime;
-        const toMin   = toVirt(displayScheduled[i + 1].time ?? 0);
-        const gap     = toMin - fromMin;
-        const isPast  = day === 'today' && fromMin < now;
-        if (gap > 180 && !isPast)
-          result.push({ type: 'gap', fromMin, toMin, key: `${fromMin}-${toMin}` });
-      }
-    }
-
-    // 루프 후 미삽입 항목(구분선 + now 배지)을 시간순으로 정렬해 추가
-    if (displayScheduled.length > 0) {
-      const pending: { virtMin: number; fn: () => void }[] = [];
-
-      for (const mark of SECTION_MARKS) {
-        if (!sectionsInserted.has(mark.key)) {
-          const { virtMin, label, key } = mark;
-          pending.push({ virtMin, fn: () => result.push({ type: 'section', label, key, virtMin }) });
-        }
-      }
-
-      if (day === 'today' && !nowInserted) {
-        pending.push({ virtMin: now, fn: () => result.push({ type: 'now', time: now, key: 'now' }) });
-      }
-
-      pending.sort((a, b) => a.virtMin - b.virtMin);
-      pending.forEach(({ fn }) => fn());
-    }
-
-    return result;
-  }, [displayScheduled, day, now]);
+  // ── 세그먼트: 이벤트/갭/현재시각/섹션 구분선 (+ 드래그 중 빈 정각 줄) ──
+  const segments = useMemo<Segment[]>(
+    () => buildSegments(displayScheduled, day, now, dragHours),
+    [displayScheduled, day, now, dragHours],
+  );
 
   const toggleGap = (key: string) =>
     setExpandedGaps(prev => {
@@ -263,49 +261,55 @@ export function useTimelineInteractions(day: DayKey) {
       return next;
     });
 
+  // ── 위치 측정 도구 (드래그 시작 때, 그리고 빈 정각 칸을 펼친 직후 다시) ──
+  /** 다른 시간 카드들의 중심 위치 */
+  const measureCardAnchors = (excludeId: string | null): CardAnchor[] =>
+    scheduled
+      .filter(t => t.id !== excludeId && t.time !== null)
+      .flatMap(t => {
+        const ae = cardEl(t.id);
+        if (!ae) return [];
+        const ar = ae.getBoundingClientRect();
+        return [{ todoId: t.id, time: toVirt(t.time!), centerY: ar.top + ar.height / 2 }];
+      });
+  /** 구분선(오후/저녁/자정)·펼친 빈 정각 줄·현재시각 빨간 바 — 카드가 없는 구간의 시간 기준점 */
+  const measureWaypoints = (): { marks: CardAnchor[]; nowAnchor?: CardAnchor } => {
+    const tl = timelineRef.current;
+    if (!tl) return { marks: [] };
+    const marks = [...tl.querySelectorAll<HTMLElement>('[data-section-min], [data-hour-min]')].map(el => {
+      const r = el.getBoundingClientRect();
+      const min = Number(el.dataset.sectionMin ?? el.dataset.hourMin);
+      return { todoId: `__mark-${min}__`, time: min, centerY: r.top + r.height / 2 };
+    });
+    const nowEl = tl.querySelector<HTMLElement>('[data-now-line]');
+    if (!nowEl) return { marks };
+    const nr = nowEl.getBoundingClientRect();
+    return { marks, nowAnchor: { todoId: '__now__', time: now, centerY: nr.top + nr.height / 2 } };
+  };
+  /** 드래그 시작: 빈 정각 칸을 펼치도록 예약 (펼친 뒤 useLayoutEffect에서 위치를 다시 잰다) */
+  const startDragExpansion = (kind: 'card' | 'unsched', id: string, e: React.PointerEvent, beforeCenterY: number) => {
+    const occupied = scheduled.filter(t => t.id !== id && t.time !== null).map(t => toVirt(t.time!));
+    expandRef.current = { kind, id, startY: e.clientY, beforeCenterY };
+    lastPointerRef.current = { x: e.clientX, y: e.clientY, startY: e.clientY, moved: false };
+    setDragHours(calcEmptyHourSlots(occupied, day, now));
+  };
+
   // ── 드래그 시작 (시간 지정된 루트 카드) ──
   const handleDragStart = (e: React.PointerEvent, todo: Todo) => {
     if (todo.time === null || !timelineRef.current || todo.completed) return;
     e.preventDefault();
 
     const cr = timelineRef.current.getBoundingClientRect();
-    const el = document.querySelector<HTMLElement>(`[data-todo-id="${todo.id}"]`);
+    const el = cardEl(todo.id);
     const er = el?.getBoundingClientRect();
-
-    const anchors: CardAnchor[] = scheduled
-      .filter(t => t.id !== todo.id && t.time !== null)
-      .flatMap(t => {
-        const ae = document.querySelector<HTMLElement>(`[data-todo-id="${t.id}"]`);
-        if (!ae) return [];
-        const ar = ae.getBoundingClientRect();
-        return [{ todoId: t.id, time: toVirt(t.time!), centerY: ar.top + ar.height / 2 }];
-      });
 
     // 잡은 카드 자신의 원래 슬롯 → 잡는 순간 시간이 안 바뀌도록 하는 waypoint
     const selfCenterY = er ? er.top + er.height / 2 : e.clientY;
     const selfAnchor: CardAnchor = { todoId: todo.id, time: toVirt(todo.time!), centerY: selfCenterY };
     // 그립의 어느 지점을 눌러도 시작=카드 중심이 되도록 보정값 저장
     const grabOffset = e.clientY - selfCenterY;
-
-    // 현재시각 빨간 바(now 라인)를 시간 보간 waypoint로 (오늘 탭에만 있음)
-    let nowAnchor: CardAnchor | undefined;
-    // 섹션 구분선(오후/저녁/자정)도 시간 waypoint로 — 카드가 없는 구간의 감도 완화
-    const sectionAnchors: CardAnchor[] = [
-      ...timelineRef.current.querySelectorAll<HTMLElement>('[data-section-min]'),
-    ].map(secEl => {
-      const sr = secEl.getBoundingClientRect();
-      return {
-        todoId: `__section-${secEl.dataset.sectionMin}__`,
-        time: Number(secEl.dataset.sectionMin),
-        centerY: sr.top + sr.height / 2,
-      };
-    });
-
-    const nowEl = timelineRef.current.querySelector<HTMLElement>('[data-now-line]');
-    if (nowEl) {
-      const nr = nowEl.getBoundingClientRect();
-      nowAnchor = { todoId: '__now__', time: now, centerY: nr.top + nr.height / 2 };
-    }
+    // 섹션 구분선·현재시각도 시간 waypoint로 — 카드가 없는 구간의 감도 완화
+    const { marks, nowAnchor } = measureWaypoints();
 
     const ds: DragState = {
       todoId: todo.id,
@@ -314,19 +318,20 @@ export function useTimelineInteractions(day: DayKey) {
       initialCardCenterY: selfCenterY,
       cardHeight: er ? er.height + 8 : 44, // +8 = margin-bottom
       currentY: selfCenterY, // 보정: 시작은 카드 중심 = 원래 시간
-      anchors,
+      anchors: measureCardAnchors(todo.id),
       containerTop:    cr.top,
       containerBottom: cr.bottom,
       containerLeft:   cr.left,
       grabOffset,
       selfAnchor,
       nowAnchor,
-      sectionAnchors,
+      sectionAnchors: marks,
     };
     hapticGrab(el ?? undefined);
     lastSnapRef.current = toVirt(todo.time!);
     setDrag(ds);
     dragRef.current = ds;
+    startDragExpansion('card', todo.id, e, selfCenterY);
   };
 
   // ── 스와이프 시작 ──
@@ -382,13 +387,6 @@ export function useTimelineInteractions(day: DayKey) {
     const tlEl = timelineRef.current;
     const cr = tlEl?.getBoundingClientRect() ?? { top: 0, bottom: 300, left: 0 };
 
-    const anchors: CardAnchor[] = scheduled.flatMap(t => {
-      const ae = document.querySelector<HTMLElement>(`[data-todo-id="${t.id}"]`);
-      if (!ae) return [];
-      const ar = ae.getBoundingClientRect();
-      return [{ todoId: t.id, time: toVirt(t.time!), centerY: ar.top + ar.height / 2 }];
-    });
-
     const ds: UnscheduledDragState = {
       todoId: todo.id,
       text: todo.text,
@@ -396,13 +394,81 @@ export function useTimelineInteractions(day: DayKey) {
       timelineTop: cr.top,
       timelineBottom: cr.bottom,
       timelineLeft: cr.left,
-      anchors,
+      anchors: measureCardAnchors(null),
     };
     hapticGrab();
     lastSnapRef.current = null;
     setUnscheduledDrag(ds);
     unscheduledDragRef.current = ds;
+    const ur = unschedEl(todo.id)?.getBoundingClientRect();
+    startDragExpansion('unsched', todo.id, e, ur ? ur.top + ur.height / 2 : e.clientY);
   };
+
+  // ── 빈 정각 칸을 펼친 직후: 스크롤 보정 + 기준점 위치 다시 재기 ──
+  // (화면에 그려진 직후·손가락이 움직이기 전에 실행 → 잡은 카드가 손가락 밑에서 튀지 않게)
+  useLayoutEffect(() => {
+    const ex = expandRef.current;
+    if (!ex || dragHours === null) return;
+    expandRef.current = null;
+    const tl = timelineRef.current;
+    const scroller = getScrollParent(tl);
+    const grabbed = ex.kind === 'card' ? cardEl(ex.id) : unschedEl(ex.id);
+    // 1) 위쪽에 칸이 펼쳐져 잡은 카드가 아래로 밀린 만큼 스크롤 → 카드가 손가락 밑에 그대로
+    if (grabbed && scroller) {
+      const r = grabbed.getBoundingClientRect();
+      const want = scroller.scrollTop + (r.top + r.height / 2) - ex.beforeCenterY;
+      // 아래로 스크롤할 여유가 모자라면 맨 아래 빈 공간을 그만큼 늘림 (놓으면 다시 0)
+      const lack = want - (scroller.scrollHeight - scroller.clientHeight);
+      if (lack > 0 && dragSpacerRef.current) dragSpacerRef.current.style.height = `${Math.ceil(lack)}px`;
+      scroller.scrollTop = want;
+    }
+    scrollRef.current = scroller ? { el: scroller, origin: scroller.scrollTop } : null;
+
+    // 2) 펼친 화면 기준으로 기준점 위치를 다시 잰다
+    const cr = tl?.getBoundingClientRect();
+    if (!cr) return;
+    const { marks, nowAnchor } = measureWaypoints();
+    if (ex.kind === 'card') {
+      const prev = dragRef.current;
+      if (!prev) return;
+      const gr = grabbed?.getBoundingClientRect();
+      const selfCenterY = gr ? gr.top + gr.height / 2 : ex.startY;
+      const next: DragState = {
+        ...prev,
+        anchors: measureCardAnchors(prev.todoId),
+        selfAnchor: prev.selfAnchor ? { ...prev.selfAnchor, centerY: selfCenterY } : undefined,
+        sectionAnchors: marks,
+        nowAnchor,
+        initialCardCenterY: selfCenterY,
+        currentY: selfCenterY,
+        // 스크롤로 다 보정하지 못했으면(스크롤 끝) 손가락 위치 = 카드 중심이 되게 다시 맞춤
+        grabOffset: ex.startY - selfCenterY,
+        containerTop: cr.top,
+        containerBottom: cr.bottom,
+        containerLeft: cr.left,
+      };
+      dragRef.current = next;
+      setDrag(next);
+    } else {
+      const prev = unscheduledDragRef.current;
+      if (!prev) return;
+      const next: UnscheduledDragState = {
+        ...prev,
+        anchors: measureCardAnchors(null),
+        waypoints: nowAnchor ? [...marks, nowAnchor] : marks,
+        snapTop: cr.top,
+        snapBottom: cr.bottom,
+        scrollDelta: 0,
+        timelineTop: cr.top,
+        timelineBottom: cr.bottom,
+        timelineLeft: cr.left,
+      };
+      unscheduledDragRef.current = next;
+      setUnscheduledDrag(next);
+    }
+  // 펼칠 칸이 정해진 직후에만 실행
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragHours]);
 
   // ── 스와이프 이동·종료 ──
   useEffect(() => {
@@ -452,9 +518,10 @@ export function useTimelineInteractions(day: DayKey) {
   useEffect(() => {
     if (!drag) return;
     const onMove = (e: PointerEvent) => {
+      trackPointer(e);
       const ds = dragRef.current;
       if (ds) {
-        const y = e.clientY - ds.grabOffset; // 누른 지점 보정
+        const y = e.clientY - ds.grabOffset + scrollDelta(); // 누른 지점 + 자동 스크롤 보정
         const dsNow = { ...ds, currentY: y, currentX: e.clientX };
         // 좌우 어느 쪽으로든 충분히 밀면서 다른 카드 위에 있으면 → 그 카드의 하위일정으로 편입
         let demote: string | null = null;
@@ -476,7 +543,7 @@ export function useTimelineInteractions(day: DayKey) {
           if (demote) hapticReorder(cardEl(demote));
         }
         if (demote) {
-          setDrag(prev => prev ? { ...prev, currentY: e.clientY - prev.grabOffset, currentX: e.clientX } : null);
+          setDrag(prev => prev ? { ...prev, currentY: e.clientY - prev.grabOffset + scrollDelta(), currentX: e.clientX } : null);
           return;
         }
         const overUnsched = isDragOverUnscheduled(dsNow);
@@ -494,7 +561,7 @@ export function useTimelineInteractions(day: DayKey) {
           }
         }
       }
-      setDrag(prev => prev ? { ...prev, currentY: e.clientY - prev.grabOffset, currentX: e.clientX } : null);
+      setDrag(prev => prev ? { ...prev, currentY: e.clientY - prev.grabOffset + scrollDelta(), currentX: e.clientX } : null);
     };
     const onEnd = () => {
       const ds = dragRef.current;
@@ -507,6 +574,7 @@ export function useTimelineInteractions(day: DayKey) {
         subDragParentTargetRef.current = null;
         setSubDragParentTarget(null);
         setDrag(null);
+        endDragExpansion();
         return;
       }
       if (isDragOverUnscheduled(ds)) {
@@ -519,6 +587,7 @@ export function useTimelineInteractions(day: DayKey) {
         assignTimeAt(day, ds.todoId, fromVirt(calcDragTime(ds)), calcDragInsertBeforeId(ds));
       }
       setDrag(null);
+      endDragExpansion();
     };
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerup',   onEnd);
@@ -535,6 +604,7 @@ export function useTimelineInteractions(day: DayKey) {
   useEffect(() => {
     if (!unscheduledDrag) return;
     const onMove = (e: PointerEvent) => {
+      trackPointer(e);
       const ds = unscheduledDragRef.current;
       // 포인터 아래 루트 카드 감지 (그 카드의 하위일정으로 편입할 대상)
       let found: string | null = null;
@@ -556,7 +626,7 @@ export function useTimelineInteractions(day: DayKey) {
       if (ds && !found) {
         const overTl = e.clientY >= ds.timelineTop && e.clientY <= ds.timelineBottom;
         if (overTl) {
-          const newSnap = calcTimeFromY(e.clientY, ds.anchors, ds.timelineTop, ds.timelineBottom);
+          const newSnap = calcUnscheduledDropTime({ ...ds, currentY: e.clientY, scrollDelta: scrollDelta() });
           if (lastSnapRef.current !== newSnap) {
             hapticTick(pillRef.current);
             lastSnapRef.current = newSnap;
@@ -599,6 +669,7 @@ export function useTimelineInteractions(day: DayKey) {
         return {
           ...prev,
           currentY: e.clientY,
+          scrollDelta: scrollDelta(),
           ...(cr ? { timelineTop: cr.top, timelineBottom: cr.bottom, timelineLeft: cr.left } : {}),
         };
       });
@@ -615,7 +686,7 @@ export function useTimelineInteractions(day: DayKey) {
         const overTl = ds.currentY >= ds.timelineTop && ds.currentY <= ds.timelineBottom;
         if (overTl) {
           hapticDrop(pillRef.current);
-          const t = calcTimeFromY(ds.currentY, ds.anchors, ds.timelineTop, ds.timelineBottom);
+          const t = calcUnscheduledDropTime(ds);
           // 같은 시간이 이미 있으면 그 무리의 맨 아래(=다음 시간 카드 앞)로
           const beforeId = getInsertionBeforeIdByTime(t, ds.anchors);
           assignTimeAt(day, ds.todoId, fromVirt(t), beforeId);
@@ -631,6 +702,7 @@ export function useTimelineInteractions(day: DayKey) {
       proposedUnschedOrderRef.current = null;
       lastUnschedOrderRef.current = null;
       setUnscheduledDrag(null);
+      endDragExpansion();
     };
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerup',   onEnd);
@@ -642,6 +714,53 @@ export function useTimelineInteractions(day: DayKey) {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!unscheduledDrag, day, assignTimeAt, makeSubItemOf, reorderUnscheduled]);
+
+  // ── 드래그 중 화면 위/아래 끝으로 끌면 자동 스크롤 (빈 정각 칸을 펼쳐 타임라인이 길어지므로) ──
+  const isTimeDragging = !!drag || !!unscheduledDrag;
+  useEffect(() => {
+    if (!isTimeDragging) return;
+    let raf = 0;
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      const sc = scrollRef.current, p = lastPointerRef.current;
+      if (!sc || !p || !p.moved) return;
+      const r = sc.el.getBoundingClientRect();
+      // 아래쪽은 하단 입력바가 덮는 만큼(스크롤 영역의 아래 여백) 빼고 계산
+      const top = r.top;
+      const bottom = r.bottom - (parseFloat(getComputedStyle(sc.el).paddingBottom) || 0);
+      let v = 0;
+      if (p.y < top + AUTO_SCROLL_ZONE) {
+        v = -Math.ceil(Math.min(1, (top + AUTO_SCROLL_ZONE - p.y) / AUTO_SCROLL_ZONE) * AUTO_SCROLL_MAX);
+      } else if (p.y > bottom - AUTO_SCROLL_ZONE) {
+        v = Math.ceil(Math.min(1, (p.y - (bottom - AUTO_SCROLL_ZONE)) / AUTO_SCROLL_ZONE) * AUTO_SCROLL_MAX);
+      }
+      if (!v) return;
+      const before = sc.el.scrollTop;
+      sc.el.scrollTop = before + v;
+      if (sc.el.scrollTop === before) return; // 이미 끝까지 스크롤됨
+      // 손가락은 그대로인데 화면이 움직였으니, 시간 계산용 위치를 스크롤된 만큼 갱신
+      const d = scrollDelta();
+      const cd = dragRef.current;
+      if (cd) {
+        const next = { ...cd, currentY: p.y - cd.grabOffset + d };
+        dragRef.current = next;
+        setDrag(next);
+        return;
+      }
+      const ud = unscheduledDragRef.current;
+      if (ud) {
+        const cr = timelineRef.current?.getBoundingClientRect();
+        const next = {
+          ...ud, scrollDelta: d,
+          ...(cr ? { timelineTop: cr.top, timelineBottom: cr.bottom, timelineLeft: cr.left } : {}),
+        };
+        unscheduledDragRef.current = next;
+        setUnscheduledDrag(next);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isTimeDragging]);
 
   // ── 하위 일정 드래그: 부모 변경 or 형제 순서 변경 ──
   useEffect(() => {
@@ -830,7 +949,7 @@ export function useTimelineInteractions(day: DayKey) {
 
   // 빈 타임라인 안내 문구용 제안 시간
   const unscheduledProposedTime = (unscheduledDrag && isOverTl)
-    ? calcTimeFromY(unscheduledDrag.currentY, unscheduledDrag.anchors, unscheduledDrag.timelineTop, unscheduledDrag.timelineBottom)
+    ? calcUnscheduledDropTime(unscheduledDrag)
     : null;
 
   return {
@@ -845,7 +964,7 @@ export function useTimelineInteractions(day: DayKey) {
     // 드래그/스와이프 상태
     drag, unscheduledDrag, swipe, subDrag, proposedSubOrder, subDragParentTarget,
     // ref
-    timelineRef, pillRef,
+    timelineRef, pillRef, dragSpacerRef,
     // 핸들러
     handleDragStart, handleSwipeStart, handleSubDragStart, handleUnscheduledDragStart,
     // 파생값

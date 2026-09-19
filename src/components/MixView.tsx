@@ -18,7 +18,7 @@ export function MixView({ day }: MixViewProps) {
     scheduled, unscheduled, displayUnscheduled, childrenByParent, segments,
     expandedGaps, toggleGap,
     drag, unscheduledDrag, swipe, subDrag, proposedSubOrder, subDragParentTarget,
-    timelineRef, pillRef,
+    timelineRef, pillRef, dragSpacerRef,
     handleDragStart, handleSwipeStart, handleSubDragStart, handleUnscheduledDragStart,
     isOverTl, unscheduledProposedTime,
     unscheduledDropHint, promotingSubId, dragIndentOffset,
@@ -88,6 +88,16 @@ export function MixView({ day }: MixViewProps) {
                     })}
                   </div>
                 )}
+              </div>
+            );
+          }
+
+          /* ── 빈 정각 줄 (드래그하는 동안만) — 카드가 없는 시간에도 놓기 쉽게 ── */
+          if (seg.type === 'hour') {
+            return (
+              <div key={seg.key} className={styles.dragHourRow} data-hour-min={seg.virtMin}>
+                <span className={styles.dragHourLabel}>{formatTime(seg.virtMin)}</span>
+                <div className={styles.dragHourLine} />
               </div>
             );
           }
@@ -395,6 +405,9 @@ export function MixView({ day }: MixViewProps) {
           </div>
         </div>
       )}
+
+      {/* 드래그 중 스크롤 보정용 빈 공간 (평소엔 높이 0) */}
+      <div ref={dragSpacerRef} aria-hidden="true" />
     </div>
   );
 }

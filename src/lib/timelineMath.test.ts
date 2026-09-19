@@ -14,10 +14,16 @@ import {
   SWIPE_TRIGGER_PX,
   DRAG_DEMOTE_DX,
   SECTION_MARKS,
+  calcEmptyHourSlots,
+  buildSegments,
+  calcUnscheduledDropTime,
   type CardAnchor,
   type DragState,
   type SwipeState,
+  type Segment,
+  type UnscheduledDragState,
 } from './timelineMath';
+import type { Todo } from '../types/todo';
 
 describe('snapTo — 5분 단위 반올림', () => {
   it('480은 그대로', () => expect(snapTo(480)).toBe(480));
@@ -275,5 +281,81 @@ describe('getSwipeVisual — 좌우 스와이프 표시값', () => {
   it('아무리 끌어도 최대 이동량을 넘지 않는다', () => {
     expect(getSwipeVisual(swipe({ currentX: 999 }), 'a').offset).toBe(SWIPE_MAX_PX);
     expect(getSwipeVisual(swipe({ currentX: -999 }), 'a').offset).toBe(-SWIPE_MAX_PX);
+  });
+});
+
+describe('calcEmptyHourSlots — 드래그 중 펼칠 빈 정각', () => {
+  it('내일 탭: 아침 6시~밤 11시, 구분선(12시·18시) 정각은 제외', () => {
+    const hours = calcEmptyHourSlots([], 'tomorrow', 0);
+    expect(hours[0]).toBe(6 * 60);
+    expect(hours[hours.length - 1]).toBe(23 * 60);
+    expect(hours).not.toContain(12 * 60);
+    expect(hours).not.toContain(18 * 60);
+    expect(hours).toHaveLength(16); // 6~23시 18개 - 구분선 2개
+  });
+  it('오늘 탭: 지금 시각 이후의 정각부터 (17:00이면 19시부터 — 18시는 저녁 구분선)', () => {
+    expect(calcEmptyHourSlots([], 'today', 17 * 60)[0]).toBe(19 * 60);
+    expect(calcEmptyHourSlots([], 'today', 16 * 60 + 59)[0]).toBe(17 * 60);
+  });
+  it('그 1시간 안에 일정이 있으면 그 정각은 없음 (15:30 일정 → 15시 줄 없음, 16시 줄은 있음)', () => {
+    const hours = calcEmptyHourSlots([15 * 60 + 30], 'tomorrow', 0);
+    expect(hours).not.toContain(15 * 60);
+    expect(hours).toContain(16 * 60);
+  });
+  it('자정이 지난 새벽(가상분 1440 이상)이면 펼칠 정각 없음', () => {
+    expect(calcEmptyHourSlots([], 'today', 25 * 60)).toEqual([]);
+  });
+});
+
+describe('buildSegments — 타임라인 그리는 순서', () => {
+  const todo = (id: string, time: number): Todo => ({
+    id, text: id, time, endTime: null, completed: false, parentId: null, order: 0,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+  const kinds = (segs: Segment[]) => segs.map(s =>
+    s.type === 'event' ? s.todo.id
+    : s.type === 'section' ? s.label
+    : s.type === 'hour' ? `${s.virtMin / 60}시`
+    : s.type === 'now' ? 'now' : 'gap');
+
+  it('평소(드래그 아님): 구분선은 시간 순서대로 카드 사이에, 3시간 넘는 빈 구간은 갭', () => {
+    const segs = buildSegments([todo('a', 9 * 60), todo('b', 20 * 60)], 'tomorrow', 0, null);
+    expect(kinds(segs)).toEqual(['a', 'gap', '오후', '저녁', 'b', '자정']);
+  });
+  it('일정이 없고 드래그 중도 아니면 아무것도 안 그림', () => {
+    expect(buildSegments([], 'tomorrow', 0, null)).toEqual([]);
+  });
+  it('드래그 중: 갭 대신 빈 정각 줄이 시간 순서대로 들어간다', () => {
+    const segs = buildSegments([todo('a', 9 * 60), todo('b', 14 * 60)], 'tomorrow', 0, [10 * 60, 11 * 60, 13 * 60]);
+    expect(kinds(segs)).toEqual(['a', '10시', '11시', '오후', '13시', 'b', '저녁', '자정']);
+  });
+  it('현재시각 표시도 시간 순서대로 (11:40이면 오후 구분선보다 위)', () => {
+    const segs = buildSegments([todo('a', 13 * 60)], 'today', 11 * 60 + 40, null);
+    expect(kinds(segs)).toEqual(['now', '오후', 'a', '저녁', '자정']);
+  });
+  it('같은 시간이면 정각 줄은 카드 위, 현재시각은 카드 아래', () => {
+    const segs = buildSegments([todo('a', 15 * 60)], 'today', 15 * 60, [15 * 60]);
+    expect(kinds(segs)).toEqual(['오후', '15시', 'a', 'now', '저녁', '자정']);
+  });
+});
+
+describe('calcUnscheduledDropTime — 시간 미지정 카드를 놓을 시간', () => {
+  const base: UnscheduledDragState = {
+    todoId: 'u', text: 'u', currentY: 0, timelineTop: 0, timelineBottom: 1000, timelineLeft: 0,
+    anchors: [{ todoId: 'a', time: 9 * 60, centerY: 100 }],
+    waypoints: [
+      { todoId: '__hour-600__', time: 10 * 60, centerY: 200 },
+      { todoId: '__hour-660__', time: 11 * 60, centerY: 300 },
+    ],
+    snapTop: 0, snapBottom: 1000, scrollDelta: 0,
+  };
+  it('펼친 정각 줄 위에 놓으면 그 정각', () => {
+    expect(calcUnscheduledDropTime({ ...base, currentY: 300 })).toBe(11 * 60);
+  });
+  it('두 정각 줄 사이 가운데면 그 사이 시간(10:30)', () => {
+    expect(calcUnscheduledDropTime({ ...base, currentY: 250 })).toBe(10 * 60 + 30);
+  });
+  it('자동 스크롤된 양만큼 손가락 위치를 보정 (화면 200 + 스크롤 100 = 11시 줄)', () => {
+    expect(calcUnscheduledDropTime({ ...base, currentY: 200, scrollDelta: 100 })).toBe(11 * 60);
   });
 });
