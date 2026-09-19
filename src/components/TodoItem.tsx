@@ -269,7 +269,7 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
           className={`${styles.addSubButton} ${isSelected ? styles.addSubButtonActive : ''}`}
           onClick={handleAddSub}
         >
-          +
+          <span className={styles.plusIcon} aria-hidden="true" />
         </button>
       ) : null}
 

@@ -226,7 +226,7 @@ export function MixView({ day }: MixViewProps) {
                     onPointerDown={e => e.stopPropagation()}
                     onClick={() => setPendingParentId(isSelected ? null : todo.id)}
                   >
-                    +
+                    <span className={styles.plusIcon} aria-hidden="true" />
                   </button>
                 )}
 

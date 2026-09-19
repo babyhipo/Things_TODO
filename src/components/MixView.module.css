@@ -430,6 +430,39 @@
   transition: color 120ms ease;
 }
 
+/* + 아이콘: 글꼴 글자 '+'는 글꼴마다 1px 정도 아래로 치우쳐 그려져서, 손잡이(=)처럼 선 두 개로 직접 그림
+   → 어느 기기에서든 버튼 정가운데. 크기 10px·굵기 1.5px는 기존 글자 모양과 동일 */
+.plusIcon {
+  position: relative;
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+.plusIcon::before,
+.plusIcon::after {
+  content: '';
+  position: absolute;
+  background-color: currentColor;
+  border-radius: 1px;
+}
+
+/* 가로선 */
+.plusIcon::before {
+  left: 0;
+  right: 0;
+  top: 4.25px;
+  height: 1.5px;
+}
+
+/* 세로선 */
+.plusIcon::after {
+  top: 0;
+  bottom: 0;
+  left: 4.25px;
+  width: 1.5px;
+}
+
 .addSubButtonActive {
   color: var(--color-accent, #3B5BDB);
 }
