@@ -4,6 +4,7 @@ import styles from './MixView.module.css';
 import { getSwipeVisual, type SwipeState } from '../lib/timelineMath';
 import type { DayKey, Todo } from '../types/todo';
 import { EditTextArea } from './EditTextArea';
+import { StarIcon, STAR_COLOR, STAR_DONE_COLOR } from './StarIcon';
 import { caretFromClick } from '../lib/caretFromClick';
 
 interface SubItemRowProps {
@@ -65,7 +66,12 @@ export function SubItemRow({
           role="checkbox"
           aria-checked={child.completed}
         >
-          <span className={styles.subItemCheckboxInner} aria-hidden="true" />
+          {/* 주요 일정이면 네모 대신 별 (완료 시 회색) */}
+          {child.starred ? (
+            <StarIcon size={15} color={child.completed ? STAR_DONE_COLOR : STAR_COLOR} />
+          ) : (
+            <span className={styles.subItemCheckboxInner} aria-hidden="true" />
+          )}
         </button>
 
         {/* 텍스트: 클릭 시 편집 (부모카드와 동일) */}

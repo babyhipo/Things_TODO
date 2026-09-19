@@ -6,6 +6,7 @@ import { toVirt } from '../lib/dayBoundary';
 import { eventColor, getSwipeVisual } from '../lib/timelineMath';
 import { SubItemRow } from './SubItemRow';
 import { EditTextArea } from './EditTextArea';
+import { StarIcon, STAR_COLOR, STAR_DONE_COLOR } from './StarIcon';
 import { caretFromClick } from '../lib/caretFromClick';
 import { useTimelineInteractions } from '../hooks/useTimelineInteractions';
 
@@ -193,14 +194,19 @@ export function MixView({ day }: MixViewProps) {
                   className={`${styles.checkbox} ${todo.completed ? styles.checkboxChecked : ''}`}
                   onClick={() => toggleComplete(day, todo.id)}
                 >
-                  <span
-                    className={styles.checkboxInner}
-                    style={{
-                      borderColor: color,
-                      backgroundColor: todo.completed ? color : undefined,
-                    }}
-                    aria-hidden="true"
-                  />
+                  {/* 주요 일정이면 동그라미 대신 별 (완료 시 회색) */}
+                  {todo.starred ? (
+                    <StarIcon size={18} color={todo.completed ? STAR_DONE_COLOR : STAR_COLOR} />
+                  ) : (
+                    <span
+                      className={styles.checkboxInner}
+                      style={{
+                        borderColor: color,
+                        backgroundColor: todo.completed ? color : undefined,
+                      }}
+                      aria-hidden="true"
+                    />
+                  )}
                 </button>
 
                 {/* 텍스트 */}
@@ -337,9 +343,13 @@ export function MixView({ day }: MixViewProps) {
                       className={`${styles.checkbox} ${todo.completed ? styles.checkboxChecked : ''}`}
                       onClick={() => toggleComplete(day, todo.id)}
                     >
-                      <span className={styles.checkboxInner} aria-hidden="true"
-                        style={{ borderColor: todo.completed ? '#9CA3AF' : '#7C3AED',
-                                 backgroundColor: todo.completed ? '#9CA3AF' : undefined }} />
+                      {todo.starred ? (
+                        <StarIcon size={18} color={todo.completed ? STAR_DONE_COLOR : STAR_COLOR} />
+                      ) : (
+                        <span className={styles.checkboxInner} aria-hidden="true"
+                          style={{ borderColor: todo.completed ? '#9CA3AF' : '#7C3AED',
+                                   backgroundColor: todo.completed ? '#9CA3AF' : undefined }} />
+                      )}
                     </button>
 
                     {/* 텍스트: 클릭 시 편집 (다른 카드와 동일) */}

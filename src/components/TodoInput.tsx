@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import styles from './TodoInput.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import type { DayKey } from '../types/todo';
+import { StarIcon, STAR_COLOR } from './StarIcon';
 
 function TemplateIcon() {
   return (
@@ -28,6 +29,8 @@ export function TodoInput({ day, onTemplateClick }: TodoInputProps) {
 
   const target = day ?? activeDay;
   const [value, setValue] = useState('');
+  // 주요 일정(별) — 켜 두고 등록하면 그 일정이 별로 표시됨. 한 번 등록하면 자동으로 꺼짐
+  const [starred, setStarred] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // pendingParentId가 설정되면 입력창 포커스
@@ -45,9 +48,10 @@ export function TodoInput({ day, onTemplateClick }: TodoInputProps) {
   const doSubmit = (meridiemHint: 'am' | 'pm') => {
     const trimmed = value.trim();
     if (!trimmed) return;
-    addTodo(target, trimmed, meridiemHint, pendingParentId ?? undefined);
+    addTodo(target, trimmed, meridiemHint, pendingParentId ?? undefined, starred);
     setPendingParentId(null);
     setValue('');
+    setStarred(false);
   };
 
   const submit = (e: FormEvent) => {
@@ -98,6 +102,7 @@ export function TodoInput({ day, onTemplateClick }: TodoInputProps) {
             <TemplateIcon />
           </button>
         )}
+        <div className={styles.inputWrap}>
         <input
           ref={inputRef}
           type="text"
@@ -113,6 +118,20 @@ export function TodoInput({ day, onTemplateClick }: TodoInputProps) {
           enterKeyHint="done"
           aria-label="할 일 입력"
         />
+          {/* 주요 일정 별 버튼 (입력칸 안 오른쪽 끝) */}
+          <button
+            type="button"
+            className={styles.starButton}
+            aria-label="주요 일정으로 등록"
+            aria-pressed={starred}
+            // 누를 때 입력칸 포커스(키보드)가 빠지지 않게
+            onPointerDown={(e) => e.preventDefault()}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setStarred((v) => !v)}
+          >
+            <StarIcon size={18} color={starred ? STAR_COLOR : '#C0C4D4'} filled={starred} />
+          </button>
+        </div>
         <button
           type="submit"
           className={styles.amButton}

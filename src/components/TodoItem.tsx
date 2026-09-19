@@ -13,6 +13,7 @@ import { formatTime } from '../lib/timeFormatter';
 import { toVirt } from '../lib/dayBoundary';
 import type { DayKey, Todo } from '../types/todo';
 import { EditTextArea } from './EditTextArea';
+import { StarIcon, STAR_COLOR, STAR_DONE_COLOR } from './StarIcon';
 import { caretFromClick } from '../lib/caretFromClick';
 
 interface TodoItemProps {
@@ -203,11 +204,16 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
         className={`${styles.checkbox} ${todo.completed ? styles.checkboxChecked : ''}`}
         onClick={() => toggleComplete(day, todo.id)}
       >
-        <span
-          className={styles.checkboxInner}
-          style={{ borderColor: timeColor, backgroundColor: todo.completed ? timeColor : undefined }}
-          aria-hidden="true"
-        />
+        {/* 주요 일정이면 동그라미 대신 별 (완료 시 회색) */}
+        {todo.starred ? (
+          <StarIcon size={isSub ? 15 : 18} color={todo.completed ? STAR_DONE_COLOR : STAR_COLOR} />
+        ) : (
+          <span
+            className={styles.checkboxInner}
+            style={{ borderColor: timeColor, backgroundColor: todo.completed ? timeColor : undefined }}
+            aria-hidden="true"
+          />
+        )}
       </button>
 
       {/* 일정 내용 */}

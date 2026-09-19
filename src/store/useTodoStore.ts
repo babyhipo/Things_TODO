@@ -20,7 +20,7 @@ interface TodoState {
   pendingParentId: string | null;
   setPendingParentId: (id: string | null) => void;
 
-  addTodo: (day: DayKey, rawText: string, meridiemHint?: 'am' | 'pm', parentId?: string | null) => void;
+  addTodo: (day: DayKey, rawText: string, meridiemHint?: 'am' | 'pm', parentId?: string | null, starred?: boolean) => void;
   updateTodoText: (day: DayKey, id: string, rawText: string) => void;
   toggleComplete: (day: DayKey, id: string) => void;
   deleteTodo: (day: DayKey, id: string) => void;
@@ -146,7 +146,7 @@ export const useTodoStore = create<TodoState>()(
         set({ days: snap, historyLength: _hist.length });
       },
 
-      addTodo: (day, rawText, meridiemHint, parentId) => {
+      addTodo: (day, rawText, meridiemHint, parentId, starred) => {
         const { time, endTime, cleanText } = parseTime(rawText);
         if (!cleanText && time === null) return;
         let adjustedTime = time;
@@ -164,6 +164,8 @@ export const useTodoStore = create<TodoState>()(
           parentId: parentId ?? null,
           order: 0,
           createdAt: new Date().toISOString(),
+          // 주요 일정(별) — 켰을 때만 기록 (기존 일정 데이터 모양은 그대로)
+          ...(starred ? { starred: true } : {}),
         };
         pushHist(get().days);
         set((state) => ({

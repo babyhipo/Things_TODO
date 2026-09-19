@@ -48,6 +48,34 @@ describe('addTodo — 일정 추가', () => {
   });
 });
 
+describe('addTodo — 주요 일정(별)', () => {
+  it('별을 켜고 등록하면 starred=true', () => {
+    store().addTodo('today', '9시 발표', 'am', null, true);
+    expect(useTodoStore.getState().days.today[0]).toMatchObject({ text: '발표', time: 540, starred: true });
+  });
+  it('별을 안 켜면 starred 표시 자체가 없음 (기존 일정과 같은 모양)', () => {
+    store().addTodo('today', '9시 회의');
+    expect(useTodoStore.getState().days.today[0].starred).toBeUndefined();
+  });
+  it('하위 일정도 별로 등록할 수 있다', () => {
+    useTodoStore.setState({ days: { today: [mk({ id: 'p', text: '부모', time: 540 })], tomorrow: [] } });
+    store().addTodo('today', '자료 준비', 'am', 'p', true);
+    const child = useTodoStore.getState().days.today.find(t => t.parentId === 'p');
+    expect(child?.starred).toBe(true);
+  });
+  it('글자를 고쳐도 별은 유지된다', () => {
+    store().addTodo('today', '9시 발표', 'am', null, true);
+    const id = useTodoStore.getState().days.today[0].id;
+    store().updateTodoText('today', id, '10시 최종 발표');
+    expect(useTodoStore.getState().days.today[0]).toMatchObject({ text: '최종 발표', time: 600, starred: true });
+  });
+  it('내일로 넘겨도 별은 유지된다', () => {
+    useTodoStore.setState({ days: { today: [{ ...mk({ id: 's', text: '발표', time: 540 }), starred: true }], tomorrow: [] } });
+    store().moveTodoToTomorrow('today', 's');
+    expect(useTodoStore.getState().days.tomorrow[0]).toMatchObject({ text: '발표', starred: true });
+  });
+});
+
 describe('toggleComplete — 완료 토글', () => {
   it('완료/미완료를 번갈아 뒤집는다', () => {
     useTodoStore.setState({ days: { today: [mk({ id: 'a', text: 'x' })], tomorrow: [] } });
