@@ -269,3 +269,28 @@
   **취약점 건수** — 세는 기준이 달라서 생긴 차이이며 둘 다 같은 상태를 가리킴.
 - 결론은 불변: 잔여 4건은 개발 서버 한정(그중 2건은 윈도우 전용)이라 배포본 무관, 해소하려면
   vite 5 → 8 필요. **배포 자체는 성공**(run 34125366373, GitHub 서버에서 npm ci → test → build 통과).
+
+## 2026-09-19 (11세션: 일정 수정 시 긴 글 잘림 해결 — 브랜치 feat/edit-full-text)
+- **문제**: 일정을 눌러 수정하면 한 줄 입력칸(<input>)이라 긴 글의 앞부분이 칸 밖으로 밀려 안 보이고,
+  커서가 항상 맨 끝에 가서 앞부분을 고칠 수 없었음. 하위 일정은 평소 보기에서도 "…"으로 잘림.
+- **Done**:
+  · 공용 수정칸 `src/components/EditTextArea.tsx`(+ .module.css) 신설 — 한 줄로 시작해 글 길이만큼
+    높이가 늘어나는 textarea. 엔터=저장 / ESC=취소 유지, 줄바꿈 문자는 띄어쓰기로 바꿈,
+    한글 조합 중 엔터(isComposing / keyCode 229)는 저장 안 함, 카드 드래그 방지 옵션(stopPointer).
+  · `src/lib/caretFromClick.ts` 신설 — 누른 글자 위치 계산(caretPositionFromPoint →
+    caretRangeFromPoint 순). 수정칸 앞에 붙는 시간 문자열("8:00 " 등) 길이만큼 보정.
+    키보드로 누르거나 계산이 안 되면 기존처럼 맨 끝.
+  · 4곳 교체: 믹스 시간 카드 / 믹스 '시간 미지정' / 하위 일정(SubItemRow) / 리스트(TodoItem, Tab
+    들여쓰기·내어쓰기 유지). 훅 `beginEdit(todo, caret?)`로 확장, ref 타입 HTMLTextAreaElement.
+  · 하위 일정 보기 텍스트의 nowrap+ellipsis 제거 → 줄바꿈으로 전체 표시.
+- **검증**: test:run 110 green · lint clean · build OK. 개발 서버(모바일 375px)에서 긴 글 일정으로
+  ①수정칸에 글 전체 표시(숨은 스크롤 없음) ②가운데 누르면 그 자리에 커서(시간 카드·미지정·하위·
+  리스트 4곳 모두) ③엔터 저장 ④ESC 취소 ⑤리스트 수정 중 Tab/Shift+Tab ⑥붙여넣기 줄바꿈→띄어쓰기
+  확인. 콘솔 에러 0.
+- **Note**:
+  · 브라우저 자동화 도구로는 실제 한글 입력기(IME) 조합을 재현할 수 없어 "조합 중 엔터" 방지는
+    코드로만 넣고 실기기 확인은 못 함 → 아이폰/맥에서 한글 치다 엔터 한 번에 저장되는지 확인 필요.
+  · `npm run test:run`이 220개로 나오는 건 예전 작업 복사본 폴더
+    `.claude/worktrees/todo-app-text-display-a28afd/`의 테스트까지 같이 돌기 때문(실제는 110개).
+- **Blocked**: 없음.
+- **Next**: 오너 로컬 확인 후 main 병합·푸시. 템플릿 편집 화면의 한 줄 입력칸은 이번 범위 제외.

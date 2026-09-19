@@ -54,16 +54,23 @@ export function useTimelineInteractions(day: DayKey) {
   // ── 인라인 편집 ──
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
-  const editInputRef  = useRef<HTMLInputElement | null>(null);
+  const editInputRef  = useRef<HTMLTextAreaElement | null>(null);
   const cancelEditRef = useRef(false);
+  // 수정칸이 열릴 때 커서를 둘 위치 (null = 맨 끝)
+  const editCaretRef  = useRef<number | null>(null);
 
-  const beginEdit = (todo: Todo) => {
+  /** caret: 글자를 누른 위치(일정 글 기준 몇 번째 글자). 없으면 커서를 맨 끝에 둔다 */
+  const beginEdit = (todo: Todo, caret: number | null = null) => {
     const timeStr = todo.time !== null
       ? (todo.endTime != null
           ? `${formatTime(todo.time)}-${formatTime(todo.endTime)} `
           : `${formatTime(todo.time)} `)
       : '';
     setEditDraft(timeStr + todo.text);
+    // 수정칸 앞에 시간 문자열이 붙으므로 그 길이만큼 뒤로 보정
+    editCaretRef.current = caret === null
+      ? null
+      : timeStr.length + Math.min(caret, todo.text.length);
     cancelEditRef.current = false;
     setEditingId(todo.id);
   };
@@ -83,7 +90,8 @@ export function useTimelineInteractions(day: DayKey) {
     if (editingId && editInputRef.current) {
       const el = editInputRef.current;
       el.focus();
-      el.setSelectionRange(el.value.length, el.value.length);
+      const pos = editCaretRef.current ?? el.value.length;
+      el.setSelectionRange(pos, pos);
     }
   }, [editingId]);
 

@@ -3,6 +3,8 @@ import type { MutableRefObject } from 'react';
 import styles from './MixView.module.css';
 import { getSwipeVisual, type SwipeState } from '../lib/timelineMath';
 import type { DayKey, Todo } from '../types/todo';
+import { EditTextArea } from './EditTextArea';
+import { caretFromClick } from '../lib/caretFromClick';
 
 interface SubItemRowProps {
   child: Todo;
@@ -19,8 +21,8 @@ interface SubItemRowProps {
   editingId: string | null;
   editDraft: string;
   setEditDraft: (v: string) => void;
-  editInputRef: MutableRefObject<HTMLInputElement | null>;
-  beginEdit: (todo: Todo) => void;
+  editInputRef: MutableRefObject<HTMLTextAreaElement | null>;
+  beginEdit: (todo: Todo, caret?: number | null) => void;
   commitEdit: (todoId: string) => void;
   cancelEdit: () => void;
 }
@@ -68,25 +70,21 @@ export function SubItemRow({
 
         {/* 텍스트: 클릭 시 편집 (부모카드와 동일) */}
         {editingId === child.id ? (
-          <input
-            ref={editInputRef}
-            type="text"
+          <EditTextArea
+            inputRef={editInputRef}
             className={styles.editInput}
             value={editDraft}
-            onChange={e => setEditDraft(e.target.value)}
-            onPointerDown={e => e.stopPropagation()}
-            onKeyDown={e => {
-              if (e.key === 'Enter') { e.preventDefault(); commitEdit(child.id); }
-              if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
-            }}
+            onChange={setEditDraft}
+            onCommit={() => commitEdit(child.id)}
+            onCancel={cancelEdit}
             onBlur={() => commitEdit(child.id)}
-            autoComplete="off"
+            stopPointer
           />
         ) : (
           <button
             type="button"
             className={`${styles.subItemText} ${child.completed ? styles.subItemTextDone : ''}`}
-            onClick={() => { if (!child.completed) beginEdit(child); }}
+            onClick={e => { if (!child.completed) beginEdit(child, caretFromClick(e)); }}
           >
             {child.text || '(내용 없음)'}
           </button>

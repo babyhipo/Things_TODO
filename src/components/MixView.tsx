@@ -5,6 +5,8 @@ import type { DayKey } from '../types/todo';
 import { toVirt } from '../lib/dayBoundary';
 import { eventColor, getSwipeVisual } from '../lib/timelineMath';
 import { SubItemRow } from './SubItemRow';
+import { EditTextArea } from './EditTextArea';
+import { caretFromClick } from '../lib/caretFromClick';
 import { useTimelineInteractions } from '../hooks/useTimelineInteractions';
 
 interface MixViewProps { day: DayKey; }
@@ -194,25 +196,21 @@ export function MixView({ day }: MixViewProps) {
                 {/* 텍스트 */}
                 <div className={styles.textWrap}>
                   {editingId === todo.id ? (
-                    <input
-                      ref={editInputRef}
-                      type="text"
+                    <EditTextArea
+                      inputRef={editInputRef}
                       className={styles.editInput}
                       value={editDraft}
-                      onChange={e => setEditDraft(e.target.value)}
-                      onPointerDown={e => e.stopPropagation()}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') { e.preventDefault(); commitEdit(todo.id); }
-                        if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
-                      }}
+                      onChange={setEditDraft}
+                      onCommit={() => commitEdit(todo.id)}
+                      onCancel={cancelEdit}
                       onBlur={() => commitEdit(todo.id)}
-                      autoComplete="off"
+                      stopPointer
                     />
                   ) : (
                     <button
                       type="button"
                       className={`${styles.cardTitle} ${todo.completed ? styles.cardTitleDone : ''}`}
-                      onClick={() => { if (!todo.completed) beginEdit(todo); }}
+                      onClick={e => { if (!todo.completed) beginEdit(todo, caretFromClick(e)); }}
                     >
                       {todo.text || <span className={styles.noText}>(내용 없음)</span>}
                     </button>
@@ -336,25 +334,21 @@ export function MixView({ day }: MixViewProps) {
 
                     {/* 텍스트: 클릭 시 편집 (다른 카드와 동일) */}
                     {editingId === todo.id ? (
-                      <input
-                        ref={editInputRef}
-                        type="text"
+                      <EditTextArea
+                        inputRef={editInputRef}
                         className={styles.editInput}
                         value={editDraft}
-                        onChange={e => setEditDraft(e.target.value)}
-                        onPointerDown={e => e.stopPropagation()}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') { e.preventDefault(); commitEdit(todo.id); }
-                          if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
-                        }}
+                        onChange={setEditDraft}
+                        onCommit={() => commitEdit(todo.id)}
+                        onCancel={cancelEdit}
                         onBlur={() => commitEdit(todo.id)}
-                        autoComplete="off"
+                        stopPointer
                       />
                     ) : (
                       <button
                         type="button"
                         className={`${styles.unscheduledText} ${todo.completed ? styles.unscheduledTextDone : ''}`}
-                        onClick={() => { if (!todo.completed) beginEdit(todo); }}
+                        onClick={e => { if (!todo.completed) beginEdit(todo, caretFromClick(e)); }}
                       >
                         {todo.text || <span className={styles.noText}>(내용 없음)</span>}
                       </button>

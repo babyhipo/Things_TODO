@@ -1,6 +1,6 @@
 import {
   type KeyboardEvent,
-  type ChangeEvent,
+  type MouseEvent,
   useEffect,
   useRef,
   useState,
@@ -12,6 +12,8 @@ import { useTodoStore } from '../store/useTodoStore';
 import { formatTime } from '../lib/timeFormatter';
 import { toVirt } from '../lib/dayBoundary';
 import type { DayKey, Todo } from '../types/todo';
+import { EditTextArea } from './EditTextArea';
+import { caretFromClick } from '../lib/caretFromClick';
 
 interface TodoItemProps {
   todo: Todo;
@@ -50,8 +52,10 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string>(() => buildEditableValue(todo));
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const cancelRef = useRef(false);
+  // 수정칸이 열릴 때 커서를 둘 위치 (null = 맨 끝)
+  const caretRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!editing) {
@@ -63,8 +67,8 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
     if (editing && inputRef.current) {
       const el = inputRef.current;
       el.focus();
-      const len = el.value.length;
-      el.setSelectionRange(len, len);
+      const pos = caretRef.current ?? el.value.length;
+      el.setSelectionRange(pos, pos);
     }
   }, [editing]);
 
@@ -98,9 +102,15 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
     return '#3B5BDB';
   })();
 
-  const beginEdit = () => {
+  const beginEdit = (e: MouseEvent<HTMLButtonElement>) => {
     if (editing) return;
-    setDraft(buildEditableValue(todo));
+    const value = buildEditableValue(todo);
+    // 누른 글자 위치 + 수정칸 앞에 붙는 시간 문자열 길이만큼 보정
+    const caret = caretFromClick(e);
+    caretRef.current = caret === null
+      ? null
+      : value.length - todo.text.length + Math.min(caret, todo.text.length);
+    setDraft(value);
     cancelRef.current = false;
     setEditing(true);
   };
@@ -121,21 +131,8 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
     setEditing(false);
   };
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setDraft(e.target.value);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      commitEdit();
-      return;
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      cancelEdit();
-      return;
-    }
+  // 엔터(저장)·ESC(취소)는 EditTextArea가 처리 — 여기선 Tab 들여쓰기/내어쓰기만
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       if (e.shiftKey) {
@@ -216,15 +213,15 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
       {/* 일정 내용 */}
       <div className={styles.textWrap}>
         {editing ? (
-          <input
-            ref={inputRef}
-            type="text"
+          <EditTextArea
+            inputRef={inputRef}
             className={styles.textInput}
             value={draft}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
+            onChange={setDraft}
+            onCommit={commitEdit}
+            onCancel={cancelEdit}
             onBlur={handleBlur}
-            autoComplete="off"
+            onKeyDown={handleKeyDown}
           />
         ) : (
           <button

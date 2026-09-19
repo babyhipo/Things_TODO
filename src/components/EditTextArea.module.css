@@ -1,0 +1,9 @@
+/* 수정칸 공통 모양 — 크기/색/밑줄은 각 화면의 className이 정함 */
+.textarea {
+  display: block;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
