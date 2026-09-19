@@ -4,7 +4,7 @@ import styles from './MixView.module.css';
 import { getSwipeVisual, type SwipeState } from '../lib/timelineMath';
 import type { DayKey, Todo } from '../types/todo';
 import { EditTextArea } from './EditTextArea';
-import { StarIcon, STAR_COLOR, STAR_DONE_COLOR } from './StarIcon';
+import { StarIcon, StarToggleButton, STAR_COLOR, STAR_DONE_COLOR } from './StarIcon';
 import { caretFromClick } from '../lib/caretFromClick';
 
 interface SubItemRowProps {
@@ -26,6 +26,8 @@ interface SubItemRowProps {
   beginEdit: (todo: Todo, caret?: number | null) => void;
   commitEdit: (todoId: string) => void;
   cancelEdit: () => void;
+  /** 주요 일정(별) 켜기/끄기 — 수정 중에만 버튼이 나타남 */
+  onToggleStar: (todoId: string) => void;
 }
 
 /**
@@ -34,7 +36,7 @@ interface SubItemRowProps {
  */
 export function SubItemRow({
   child, day, swipe, onSwipeStart, onToggle, dragging = false, onDragStart,
-  editingId, editDraft, setEditDraft, editInputRef, beginEdit, commitEdit, cancelEdit,
+  editingId, editDraft, setEditDraft, editInputRef, beginEdit, commitEdit, cancelEdit, onToggleStar,
 }: SubItemRowProps) {
   const { active, offset, deleteProgress, moveProgress } = getSwipeVisual(swipe, child.id);
 
@@ -94,6 +96,11 @@ export function SubItemRow({
           >
             {child.text || '(내용 없음)'}
           </button>
+        )}
+
+        {/* 수정 중: 별 켜기/끄기 버튼 (주요 일정 지정) */}
+        {editingId === child.id && (
+          <StarToggleButton starred={!!child.starred} onToggle={() => onToggleStar(child.id)} />
         )}
 
         {/* 드래그 손잡이 */}

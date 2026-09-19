@@ -59,6 +59,7 @@ const AUTO_SCROLL_ARM_PX = 10;
 export function useTimelineInteractions(day: DayKey) {
   const days               = useTodoStore((s) => s.days);
   const toggleComplete     = useTodoStore((s) => s.toggleComplete);
+  const toggleStarInDay    = useTodoStore((s) => s.toggleStar);
   const deleteTodo         = useTodoStore((s) => s.deleteTodo);
   const moveTodoToTomorrow = useTodoStore((s) => s.moveTodoToTomorrow);
   const updateTodoText     = useTodoStore((s) => s.updateTodoText);
@@ -967,6 +968,7 @@ export function useTimelineInteractions(day: DayKey) {
   return {
     // 스토어 값(JSX에서 사용)
     now, pendingParentId, toggleComplete, setPendingParentId,
+    toggleStar: (id: string) => toggleStarInDay(day, id),
     // 편집
     editingId, editDraft, setEditDraft, editInputRef, beginEdit, commitEdit, cancelEdit,
     // 데이터

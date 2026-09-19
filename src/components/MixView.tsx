@@ -6,7 +6,7 @@ import { toVirt } from '../lib/dayBoundary';
 import { eventColor, getSwipeVisual } from '../lib/timelineMath';
 import { SubItemRow } from './SubItemRow';
 import { EditTextArea } from './EditTextArea';
-import { StarIcon, STAR_COLOR, STAR_DONE_COLOR } from './StarIcon';
+import { StarIcon, StarToggleButton, STAR_COLOR, STAR_DONE_COLOR } from './StarIcon';
 import { caretFromClick } from '../lib/caretFromClick';
 import { useTimelineInteractions } from '../hooks/useTimelineInteractions';
 
@@ -14,7 +14,7 @@ interface MixViewProps { day: DayKey; }
 
 export function MixView({ day }: MixViewProps) {
   const {
-    now, pendingParentId, toggleComplete, setPendingParentId,
+    now, pendingParentId, toggleComplete, setPendingParentId, toggleStar,
     editingId, editDraft, setEditDraft, editInputRef, beginEdit, commitEdit, cancelEdit,
     scheduled, unscheduled, displayUnscheduled, childrenByParent, segments,
     expandedGaps, toggleGap,
@@ -233,8 +233,10 @@ export function MixView({ day }: MixViewProps) {
                   )}
                 </div>
 
-                {/* 하위 일정 추가 버튼 (루트 아이템만) */}
-                {!todo.parentId && (
+                {/* 수정 중: + 자리에 별 켜기/끄기 버튼 (주요 일정 지정) */}
+                {editingId === todo.id ? (
+                  <StarToggleButton starred={!!todo.starred} onToggle={() => toggleStar(todo.id)} />
+                ) : !todo.parentId && (
                   <button
                     type="button"
                     aria-label="하위 일정 추가"
@@ -292,6 +294,7 @@ export function MixView({ day }: MixViewProps) {
                     beginEdit={beginEdit}
                     commitEdit={commitEdit}
                     cancelEdit={cancelEdit}
+                    onToggleStar={toggleStar}
                   />
                 ))}
             </div>
@@ -374,6 +377,11 @@ export function MixView({ day }: MixViewProps) {
                       </button>
                     )}
 
+                    {/* 수정 중: 별 켜기/끄기 버튼 (주요 일정 지정) */}
+                    {editingId === todo.id && (
+                      <StarToggleButton starred={!!todo.starred} onToggle={() => toggleStar(todo.id)} />
+                    )}
+
                     {/* 그립 (오른쪽, 2선) */}
                     {!todo.completed && (
                       <button
@@ -407,6 +415,7 @@ export function MixView({ day }: MixViewProps) {
                     beginEdit={beginEdit}
                     commitEdit={commitEdit}
                     cancelEdit={cancelEdit}
+                    onToggleStar={toggleStar}
                   />
                 ))}
                 </Fragment>

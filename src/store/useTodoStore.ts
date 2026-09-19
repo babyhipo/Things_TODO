@@ -25,6 +25,8 @@ interface TodoState {
   toggleComplete: (day: DayKey, id: string) => void;
   deleteTodo: (day: DayKey, id: string) => void;
   moveTodoToTomorrow: (day: DayKey, id: string) => void;
+  /** 주요 일정(별) 켜기/끄기 — 이미 등록한 일정용 */
+  toggleStar: (day: DayKey, id: string) => void;
   moveIncompleteToTomorrow: (day: DayKey) => void;
 
   reorderTodos: (day: DayKey, newOrderIds: string[], movedId: string) => void;
@@ -183,6 +185,22 @@ export const useTodoStore = create<TodoState>()(
             [day]: state.days[day].map((t) =>
               t.id === id ? { ...t, text: cleanText, time, endTime: endTime ?? null } : t,
             ),
+          },
+          historyLength: _hist.length,
+        }));
+      },
+
+      toggleStar: (day, id) => {
+        pushHist(get().days);
+        set((state) => ({
+          days: {
+            ...state.days,
+            [day]: state.days[day].map((t) => {
+              if (t.id !== id) return t;
+              // 끌 때는 표시 자체를 지워 일반 일정과 같은 모양으로
+              const { starred, ...rest } = t;
+              return starred ? rest : { ...rest, starred: true };
+            }),
           },
           historyLength: _hist.length,
         }));

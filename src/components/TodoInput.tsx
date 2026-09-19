@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import styles from './TodoInput.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import type { DayKey } from '../types/todo';
-import { StarIcon, STAR_COLOR } from './StarIcon';
+import { StarIcon, STAR_COLOR, STAR_OFF_COLOR } from './StarIcon';
 
 function TemplateIcon() {
   return (
@@ -129,7 +129,7 @@ export function TodoInput({ day, onTemplateClick }: TodoInputProps) {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => setStarred((v) => !v)}
           >
-            <StarIcon size={18} color={starred ? STAR_COLOR : '#C0C4D4'} filled={starred} />
+            <StarIcon size={18} color={starred ? STAR_COLOR : STAR_OFF_COLOR} filled={starred} />
           </button>
         </div>
         <button

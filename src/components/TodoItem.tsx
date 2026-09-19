@@ -13,7 +13,7 @@ import { formatTime } from '../lib/timeFormatter';
 import { toVirt } from '../lib/dayBoundary';
 import type { DayKey, Todo } from '../types/todo';
 import { EditTextArea } from './EditTextArea';
-import { StarIcon, STAR_COLOR, STAR_DONE_COLOR } from './StarIcon';
+import { StarIcon, StarToggleButton, STAR_COLOR, STAR_DONE_COLOR } from './StarIcon';
 import { caretFromClick } from '../lib/caretFromClick';
 
 interface TodoItemProps {
@@ -39,6 +39,7 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
   const updateTodoText = useTodoStore((s) => s.updateTodoText);
   const indentTodo = useTodoStore((s) => s.indentTodo);
   const outdentTodo = useTodoStore((s) => s.outdentTodo);
+  const toggleStar = useTodoStore((s) => s.toggleStar);
   const pendingParentId = useTodoStore((s) => s.pendingParentId);
   const setPendingParentId = useTodoStore((s) => s.setPendingParentId);
 
@@ -242,6 +243,8 @@ export function TodoItem({ todo, day, now, gapAfter = 6 }: TodoItemProps) {
 
       {editing ? (
         <div className={styles.indentButtons}>
+          {/* 별 켜기/끄기 (주요 일정 지정) */}
+          <StarToggleButton starred={!!todo.starred} onToggle={() => toggleStar(day, todo.id)} />
           {isSub ? (
             <button
               type="button"

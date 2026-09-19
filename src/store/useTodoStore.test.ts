@@ -76,6 +76,32 @@ describe('addTodo — 주요 일정(별)', () => {
   });
 });
 
+describe('toggleStar — 등록한 일정의 별 켜고 끄기', () => {
+  it('별이 없던 일정을 켜면 starred=true, 다시 끄면 표시가 사라진다', () => {
+    useTodoStore.setState({ days: { today: [mk({ id: 'a', text: '회의', time: 540 })], tomorrow: [] } });
+    store().toggleStar('today', 'a');
+    expect(useTodoStore.getState().days.today[0].starred).toBe(true);
+    store().toggleStar('today', 'a');
+    expect(useTodoStore.getState().days.today[0].starred).toBeUndefined();
+  });
+  it('다른 일정과 글자·시간·완료 상태는 그대로', () => {
+    useTodoStore.setState({ days: { today: [
+      mk({ id: 'a', text: '회의', time: 540, completed: true }),
+      mk({ id: 'b', text: '점심', time: 720 }),
+    ], tomorrow: [] } });
+    store().toggleStar('today', 'a');
+    const [a, b] = useTodoStore.getState().days.today;
+    expect(a).toMatchObject({ text: '회의', time: 540, completed: true, starred: true });
+    expect(b.starred).toBeUndefined();
+  });
+  it('되돌리기(undo)로 취소할 수 있다', () => {
+    useTodoStore.setState({ days: { today: [mk({ id: 'a', text: '회의', time: 540 })], tomorrow: [] } });
+    store().toggleStar('today', 'a');
+    store().undo();
+    expect(useTodoStore.getState().days.today[0].starred).toBeUndefined();
+  });
+});
+
 describe('toggleComplete — 완료 토글', () => {
   it('완료/미완료를 번갈아 뒤집는다', () => {
     useTodoStore.setState({ days: { today: [mk({ id: 'a', text: 'x' })], tomorrow: [] } });
