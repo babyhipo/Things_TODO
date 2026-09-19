@@ -17,9 +17,9 @@
 }
 
 /*
-  세로선: 목록뷰 체크박스 중앙 위치와 동일하게 정렬
-  timeline.pad(16) + card.pad(10) + time(40) + gap(10) + checkbox_half(12) = 88px
-  ::before left = 88 - 1 = 87px (2px 선의 중심이 88px)
+  세로선: 카드 체크 원 중심과 정확히 겹치게 정렬 (목록뷰 체크박스 위치와도 동일)
+  timeline.pad(12) + card.pad(6) + time(36) + gap(10) + checkbox_half(12) = 76px
+  ::before left = 76 - 1 = 75px (2px 선의 중심이 76px)
 */
 .timeline::before {
   content: '';
@@ -105,7 +105,8 @@
   background-color: var(--color-bg-card, #FFFFFF);
   border-radius: var(--radius-md, 8px);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding: 3px 8px 3px 10px;
+  /* 왼쪽 6px: 체크 원 중심이 세로 시간선(76px) 정중앙에 오도록 (시간·체크·글자 묶음 전체가 함께 이동) */
+  padding: 3px 8px 3px 6px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -335,7 +336,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 12px;
+  /* 8px: 체크 원 중심이 세로 시간선 정중앙에 오도록 (글자도 함께 이동 → 부모 카드와 글자 폭 동일 유지) */
+  margin-left: 8px;
 }
 
 .subItemCheckboxInner {
