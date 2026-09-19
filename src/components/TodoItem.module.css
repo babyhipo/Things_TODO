@@ -17,9 +17,9 @@
   align-items: center;
 }
 
-/* 두 줄 시간이 카드 높이를 꽉 채우지 않게 위아래 여백 확보 (보통 카드와 비슷한 여유) */
+/* 두 줄 시간도 카드 위아래 여백 기준값(--card-gap-y)을 따름 */
 .itemRange .timeWrap {
-  padding: 6px 0;
+  padding: var(--card-time-pad-y) 0;
 }
 
 .itemSub {
@@ -74,6 +74,8 @@
 /* 하위 항목 텍스트도 일정카드 텍스트와 동일 크기로 통일 (편집창은 기본 .textInput 16px 상속) */
 .itemSub .textButton {
   font-size: var(--card-text);
+  /* 하위 카드 안쪽 여백이 2px(다른 카드보다 1px 적음)이라 글자 쪽에 1px 더해 기준값을 맞춤 */
+  padding: calc(var(--card-text-pad-y) + 1px) 0;
   /* 부모 카드의 + 버튼 자리(20px + 간격 10px)만큼 비워 글자 폭을 부모와 맞춤
      (수정 중엔 부모도 + 대신 들여쓰기 버튼이 나와 폭이 같으므로 평소 글자에만 적용) */
   margin-right: 30px;
@@ -284,7 +286,8 @@
   font-size: var(--card-text);
   font-weight: 600;
   color: var(--color-text, #1F1F1F);
-  padding: 2px 0;
+  /* 줄바꿈돼 카드가 커져도 위아래 여백이 기준값(--card-gap-y)과 같게 */
+  padding: var(--card-text-pad-y) 0;
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.3;

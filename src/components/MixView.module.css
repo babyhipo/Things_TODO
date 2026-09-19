@@ -134,9 +134,9 @@
   align-items: center;
 }
 
-/* 두 줄 시간이 카드 높이를 꽉 채우지 않게 위아래 여백 확보 (보통 카드와 비슷한 여유) */
+/* 두 줄 시간도 카드 위아래 여백 기준값(--card-gap-y)을 따름 */
 .cardRange .timeWrap {
-  padding: 6px 0;
+  padding: var(--card-time-pad-y) 0;
 }
 
 /* ── 시간 레이블 래퍼 (목록뷰 .timeWrap과 동일) ── */
@@ -227,6 +227,8 @@
   line-height: 1.3;
   word-break: break-word;
   text-align: left;
+  /* 줄바꿈돼 카드가 커져도 위아래 여백이 기준값(--card-gap-y)과 같게 */
+  padding: var(--card-text-pad-y) 0;
 }
 
 .editInput {
@@ -268,8 +270,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  /* 오른쪽 8px = 부모 카드와 같게 → 손잡이가 부모 손잡이와 같은 세로줄 */
-  padding: 5px 8px 5px 8px;
+  /* 오른쪽 8px = 부모 카드와 같게 → 손잡이가 부모 손잡이와 같은 세로줄.
+     위아래 3px = 다른 카드와 같게 (나머지 여백은 글자 padding이 채움, 한 줄일 땐 min-height가 높이 결정) */
+  padding: 3px 8px 3px 8px;
   /* 상하 간격은 wrapper(.subRow)에서 제어 → 여기선 0, 들여쓰기(좌 36)만 유지 */
   margin: 0 0 0 36px;
   background-color: #FFFFFF;
@@ -314,6 +317,8 @@
   line-height: 1.3;
   word-break: break-word;
   text-align: left;
+  /* 줄바꿈돼 카드가 커져도 위아래 여백이 기준값(--card-gap-y)과 같게 */
+  padding: var(--card-text-pad-y) 0;
 }
 
 .subItemTextDone {
@@ -732,6 +737,8 @@
   word-break: break-word;
   line-height: 1.3;
   text-align: left;
+  /* 줄바꿈돼 카드가 커져도 위아래 여백이 기준값(--card-gap-y)과 같게 */
+  padding: var(--card-text-pad-y) 0;
 }
 
 .unscheduledTextDone {
