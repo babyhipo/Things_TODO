@@ -129,10 +129,14 @@
   pointer-events: none;
 }
 
-/* 구간 일정: 상단 정렬 + 내부 요소 margin-top 보정 */
 /* 시간 범위 카드(두 줄 시간)도 체크박스·텍스트·버튼을 카드 세로 가운데에 맞춤 */
 .cardRange {
   align-items: center;
+}
+
+/* 두 줄 시간이 카드 높이를 꽉 채우지 않게 위아래 여백 확보 (보통 카드와 비슷한 여유) */
+.cardRange .timeWrap {
+  padding: 6px 0;
 }
 
 /* ── 시간 레이블 래퍼 (목록뷰 .timeWrap과 동일) ── */
