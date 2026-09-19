@@ -707,12 +707,13 @@
 }
 
 /* ── 드래그 중 펼치는 빈 정각 줄 ── */
-/* 높이 44px: 정각에 자석처럼 붙는 구간(위아래 8px)을 빼고도 줄 사이에서 5분 단위 조절 여유를 둠 */
+/* 높이 22px: 펼쳐지는 길이를 짧게. 정각 자석 구간은 위아래 4px(HOUR_SNAP_ZONE)로 좁혀
+   줄 사이에서 5분 단위 조절 여유를 남김 */
 .dragHourRow {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 44px;
+  height: 22px;
   animation: dragHourIn 120ms ease-out;
 }
 

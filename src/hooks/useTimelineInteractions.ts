@@ -22,6 +22,7 @@ import {
   SWIPE_TRIGGER_PX,
   dragDx,
   DRAG_DEMOTE_DX,
+  HOUR_SNAP_ZONE,
   type CardAnchor,
   type DragState,
   type SwipeState,
@@ -279,7 +280,11 @@ export function useTimelineInteractions(day: DayKey) {
     const marks = [...tl.querySelectorAll<HTMLElement>('[data-section-min], [data-hour-min]')].map(el => {
       const r = el.getBoundingClientRect();
       const min = Number(el.dataset.sectionMin ?? el.dataset.hourMin);
-      return { todoId: `__mark-${min}__`, time: min, centerY: r.top + r.height / 2 };
+      const isHour = el.dataset.hourMin !== undefined;
+      return {
+        todoId: `__mark-${min}__`, time: min, centerY: r.top + r.height / 2,
+        ...(isHour ? { snapZone: HOUR_SNAP_ZONE } : {}),
+      };
     });
     const nowEl = tl.querySelector<HTMLElement>('[data-now-line]');
     if (!nowEl) return { marks };
@@ -417,9 +422,14 @@ export function useTimelineInteractions(day: DayKey) {
     if (grabbed && scroller) {
       const r = grabbed.getBoundingClientRect();
       const want = scroller.scrollTop + (r.top + r.height / 2) - ex.beforeCenterY;
-      // 아래로 스크롤할 여유가 모자라면 맨 아래 빈 공간을 그만큼 늘림 (놓으면 다시 0)
-      const lack = want - (scroller.scrollHeight - scroller.clientHeight);
-      if (lack > 0 && dragSpacerRef.current) dragSpacerRef.current.style.height = `${Math.ceil(lack)}px`;
+      // 아래로 스크롤할 여유가 모자라면 맨 아래 빈 공간을 늘림 (놓으면 다시 0).
+      // 내용이 화면보다 짧으면 늘린 공간 일부가 화면 안 빈자리를 채우는 데 쓰이므로, 다시 재서 모자란 만큼 더 늘린다
+      const spacer = dragSpacerRef.current;
+      for (let i = 0; spacer && i < 3; i++) {
+        const lack = want - (scroller.scrollHeight - scroller.clientHeight);
+        if (lack <= 0) break;
+        spacer.style.height = `${(parseFloat(spacer.style.height) || 0) + Math.ceil(lack)}px`;
+      }
       scroller.scrollTop = want;
     }
     scrollRef.current = scroller ? { el: scroller, origin: scroller.scrollTop } : null;

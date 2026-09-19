@@ -7,6 +7,8 @@ export interface CardAnchor {
   todoId: string;
   time: number;
   centerY: number; // 드래그 시작 시 측정된 고정값
+  /** 이 기준점의 자석 구간(px, 중심 ±). 없으면 DRAG_SNAP_ZONE. 촘촘한 정각 줄은 더 좁게 */
+  snapZone?: number;
 }
 
 export interface DragState {
@@ -39,6 +41,8 @@ export interface DragState {
  * 손가락 위치 = 실제 배치 위치가 일치하도록. self·now 앵커는 정확히 그 시간에 도달 가능한
  * waypoint로 섞는다(겹침방지 간격 없음) → 잡는 순간 원래 시간 유지, 빨간 바=현재시각 일치.
  */
+const zoneOf = (a: CardAnchor) => a.snapZone ?? DRAG_SNAP_ZONE;
+
 export function calcDragTime(ds: DragState): number {
   const sorted = [
     ...ds.anchors,
@@ -59,20 +63,20 @@ export function calcDragTime(ds: DragState): number {
   let nearestDist = Infinity;
   for (const a of sorted) {
     const d = Math.abs(currentY - a.centerY);
-    if (d <= DRAG_SNAP_ZONE && d < nearestDist) { nearest = a; nearestDist = d; }
+    if (d <= zoneOf(a) && d < nearestDist) { nearest = a; nearestDist = d; }
   }
   if (nearest) return nearest.time;
 
   const first = sorted[0], last = sorted[sorted.length - 1];
   // 첫 카드 위: 하루 시작(새벽4시)~첫 카드 시간 (존 바깥부터 보간)
   if (currentY < first.centerY) {
-    const hi = first.centerY - DRAG_SNAP_ZONE;
+    const hi = first.centerY - zoneOf(first);
     const t = Math.max(0, Math.min(1, (currentY - containerTop) / Math.max(1, hi - containerTop)));
     return snapTo(Math.max(DAY_START_MIN, Math.round(DAY_START_MIN + t * (first.time - DAY_START_MIN))));
   }
   // 마지막 카드 아래: 마지막 카드 시간~하루 끝
   if (currentY > last.centerY) {
-    const lo = last.centerY + DRAG_SNAP_ZONE;
+    const lo = last.centerY + zoneOf(last);
     const t = Math.max(0, Math.min(1, (currentY - lo) / Math.max(1, containerBottom - lo)));
     return snapTo(Math.min(1679, Math.round(last.time + t * (1679 - last.time))));
   }
@@ -81,8 +85,8 @@ export function calcDragTime(ds: DragState): number {
     const above = sorted[i], below = sorted[i + 1];
     if (currentY > above.centerY && currentY < below.centerY) {
       if (below.time <= above.time) return above.time; // 같은 시간 → 그 시간 유지
-      const lo = above.centerY + DRAG_SNAP_ZONE;
-      const hi = below.centerY - DRAG_SNAP_ZONE;
+      const lo = above.centerY + zoneOf(above);
+      const hi = below.centerY - zoneOf(below);
       if (currentY <= lo) return above.time;
       if (currentY >= hi) return below.time;
       const t = (currentY - lo) / Math.max(1, hi - lo);
@@ -197,6 +201,9 @@ export const SNAP = 5; // 시간 스냅 단위(분)
 // 같은 시간 스냅 존(px): 카드 중심 ±이 값 안에서는 시간이 그 카드 시간으로 고정되고,
 // 중심보다 위=앞/아래=뒤로 순서만 갈린다. 이 존을 벗어나야 시간이 바뀐다.
 export const DRAG_SNAP_ZONE = 8;
+// 드래그 중 펼치는 빈 정각 줄의 자석 구간(px). 줄 높이(22px)가 작아 카드보다 좁게 →
+// 줄 사이에 5분 단위로 조절할 공간을 남긴다
+export const HOUR_SNAP_ZONE = 4;
 // 일정카드를 좌우 어느 쪽으로든 이 정도(px) 밀면서 다른 카드 위에 놓으면 그 카드의 하위일정이 된다.
 // 세로 위치는 시간 조절에 이미 쓰이므로 가로 이동으로 구분하되, 손잡이가 카드 오른쪽 끝에 있어
 // 모바일에서는 오른쪽으로 밀 여유가 없다 → 왼쪽으로 밀어도 동일하게 동작한다.
