@@ -238,11 +238,16 @@
 
 .timeWrap {
   flex: 0 0 auto;
-  width: 36px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  /* 시간 칸을 '카드 왼쪽 끝 ~ 체크 원 왼쪽 끝' 공간 전체로 넓혀 시간 글자를 그 정가운데에 둠.
+     카드 왼쪽 여백 10 + 기존 칸 36 + 간격 10 + 체크박스 칸 안쪽 여백 5(24px 칸의 14px 원) = 61px.
+     음수 margin(-10 / -15)으로 차지하는 폭은 기존 36px 그대로 → 체크박스·글자 위치 불변 */
+  width: 61px;
+  margin: 0 -15px 0 -10px;
+  /* 두 줄(범위) 시간은 한 덩어리로 가운데, 줄끼리는 오른쪽 끝 맞춤 */
+  display: grid;
   justify-content: center;
+  justify-items: end;
+  align-content: center;
 }
 
 .time {
