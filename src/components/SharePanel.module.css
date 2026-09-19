@@ -1,0 +1,193 @@
+/* 공유 선택 창 — 템플릿 창과 같은 방식으로 아래에서 올라옴 */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(31, 31, 31, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease-out;
+  z-index: 40;
+}
+
+.backdropOpen {
+  opacity: 1;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.sheet {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  max-width: var(--app-max-width, 420px);
+  max-height: 80vh;
+  transform: translate(-50%, 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 250ms ease-out, opacity 250ms ease-out;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-card, #FFFFFF);
+  color: var(--color-text);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.sheetOpen {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px var(--space-4, 16px) 10px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.title {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.allBtn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-accent);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.allBtn:active {
+  background-color: var(--color-accent-light);
+}
+
+/* 일정 목록 — 길면 이 안에서만 스크롤 */
+.list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px 0;
+}
+
+.empty {
+  margin: 24px 0;
+  text-align: center;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-muted);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px var(--space-4, 16px);
+  text-align: left;
+  font-size: var(--font-size-sm, 14px);
+  touch-action: manipulation;
+}
+
+.row:active {
+  background-color: var(--color-bg);
+}
+
+/* 하위 일정: 시간 칸만큼 들여쓰기 */
+.rowSub {
+  padding-left: calc(var(--space-4, 16px) + 26px);
+  font-size: 13px;
+  min-height: 34px;
+}
+
+.rowOff .time,
+.rowOff .text {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.box {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid #C5CBE0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boxOn {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.time {
+  flex: 0 0 auto;
+  min-width: 38px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.textDone {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.bottomBar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  padding-bottom: calc(8px + var(--safe-bottom));
+  border-top: 1px solid var(--color-line);
+}
+
+.closeBtn {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background-color: var(--color-line);
+  border-radius: var(--radius-md, 8px);
+}
+
+.shareBtn {
+  flex: 1 1 auto;
+  height: 40px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background-color: var(--color-accent);
+  border-radius: var(--radius-md, 8px);
+  transition: opacity 120ms ease;
+}
+
+.shareBtn:active {
+  opacity: 0.85;
+}
+
+.shareBtn:disabled {
+  background-color: #B8C3EE;
+}
+
+.star {
+  flex: 0 0 auto;
+  display: flex;
+}

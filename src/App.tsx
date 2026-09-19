@@ -10,6 +10,8 @@ import { TemplatePanel } from './components/templates/TemplatePanel';
 import { useDayRollover } from './hooks/useDayRollover';
 import { useSeedTemplates } from './components/templates/useSeedTemplates';
 import { useTodoStore } from './store/useTodoStore';
+import { useSharedLink } from './hooks/useSharedLink';
+import { SharedView } from './components/SharedView';
 
 function App() {
   useDayRollover();
@@ -23,6 +25,13 @@ function App() {
 
   const activeTab: FolderTabValue =
     activeStoreDay === 'tomorrow' ? 'tomorrow' : 'today';
+
+  // 공유 링크로 들어온 경우: 평소 화면 대신 보기 전용 화면만 보여준다
+  const shared = useSharedLink();
+  if (shared.state.status === 'loading') return null;
+  if (shared.state.status === 'ready') {
+    return <SharedView day={shared.state.day} onExit={shared.exit} />;
+  }
 
   return (
     <AppShell

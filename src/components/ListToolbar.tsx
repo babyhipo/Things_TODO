@@ -3,6 +3,8 @@ import styles from './ListToolbar.module.css';
 import { useTodoStore } from '../store/useTodoStore';
 import { fireConfetti } from '../lib/useConfetti';
 import { hapticDrop } from '../lib/haptics';
+import { SharePanel } from './SharePanel';
+import { LinkIcon } from './LinkIcon';
 import type { DayKey } from '../types/todo';
 
 interface ListToolbarProps {
@@ -38,6 +40,7 @@ export function ListToolbar({ day }: ListToolbarProps) {
   const historyLength  = useTodoStore((s) => s.historyLength);
   const todos          = useTodoStore((s) => s.days[day]);
   const [clapping, setClapping] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const hasDuplicates = (() => {
     const seen = new Set<string>();
@@ -75,6 +78,15 @@ export function ListToolbar({ day }: ListToolbarProps) {
       >
         👏
       </button>
+      <button
+        type="button"
+        className={styles.shareBtn}
+        onClick={() => setShareOpen(true)}
+        disabled={todos.length === 0}
+        aria-label="일정 공유"
+      >
+        <LinkIcon />
+      </button>
       <div className={styles.spacer} />
       <button
         type="button"
@@ -110,6 +122,7 @@ export function ListToolbar({ day }: ListToolbarProps) {
       >
         전체 지우기
       </button>
+      <SharePanel open={shareOpen} day={day} onClose={() => setShareOpen(false)} />
     </div>
   );
 }

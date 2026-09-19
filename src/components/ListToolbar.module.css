@@ -118,3 +118,24 @@
 .pushBtn:disabled {
   opacity: 0.35;
 }
+
+/* 공유(링크) 버튼 — 박수 오른쪽 */
+.shareBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-accent, #3B5BDB);
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.shareBtn:not(:disabled):active {
+  background-color: var(--color-accent-light, #EEF2FF);
+}
+
+.shareBtn:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.35;
+}
