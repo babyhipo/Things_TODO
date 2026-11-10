@@ -40,3 +40,7 @@ CLAUDE.md
 *.njsproj
 *.sln
 *.sw?
+
+# 개인 스크린샷·개발 기록 (공개 저장소 비노출, 로컬에만 보관)
+screen_shots/
+progress.md
